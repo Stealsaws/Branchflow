@@ -1,0 +1,2999 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BranchFlow — ระบบสื่อสารสาขา</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- PWA -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23c2410c'/><text y='.9em' font-size='80' x='10'>⚡</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23c2410c'/><text y='.9em' font-size='80' x='10'>⚡</text></svg>">
+<meta name="theme-color" content="#c2410c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="BranchFlow">
+<style>
+:root{
+  --o50:#fff7ed;--o100:#ffedd5;--o200:#fed7aa;--o300:#fdba74;
+  --o400:#fb923c;--o500:#f97316;--o600:#ea580c;--o700:#c2410c;
+  --bg:#fdf6ee;--sf:rgba(255,255,255,.9);--sf2:#fff;
+  --bd:rgba(234,88,12,.14);--bd2:#e5e5e5;
+  --t1:#1a1a1a;--t2:#525252;--t3:#a3a3a3;
+  --red:#ef4444;--grn:#22c55e;--blu:#3b82f6;--pur:#8b5cf6;--yel:#f59e0b;
+  --sh:0 4px 16px -4px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.06);
+  --sho:0 6px 24px -4px rgba(234,88,12,.32);
+  --shd:0 24px 60px -10px rgba(0,0,0,.22);
+}
+[data-theme=dark]{
+  --bg:#111;--sf:rgba(28,28,28,.92);--sf2:#1c1c1c;
+  --bd:rgba(251,146,60,.2);--bd2:#2a2a2a;
+  --t1:#f0f0f0;--t2:#a3a3a3;--t3:#525252;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 55% 45% at 0% 0%,rgba(251,146,60,.18) 0%,transparent 55%),
+             radial-gradient(ellipse 40% 35% at 100% 90%,rgba(251,191,36,.12) 0%,transparent 55%)}
+[data-theme=dark] body::before{opacity:.3}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--o300);border-radius:9px}
+
+/* LAYOUT */
+#wrap{position:relative;z-index:1;display:flex;gap:14px;padding:14px;max-width:1700px;margin:0 auto}
+#main{flex:1;display:flex;flex-direction:column;gap:12px;min-width:0}
+#rcol{width:256px;min-width:256px;display:flex;flex-direction:column;gap:12px}
+.glass{background:var(--sf);backdrop-filter:blur(22px) saturate(1.5);border:1px solid var(--bd);box-shadow:var(--sh)}
+.card{background:var(--sf2);border:1px solid var(--bd2);border-radius:14px;box-shadow:var(--sh)}
+
+/* SIDEBAR */
+#sb{width:224px;min-width:224px;position:sticky;top:14px;height:calc(100vh - 28px);display:flex;flex-direction:column;border-radius:20px;overflow:hidden}
+.sb-top{padding:18px 16px;border-top:3px solid rgba(251,191,36,.6);background:linear-gradient(145deg,#7c2d12 0%,#c2410c 30%,#ea580c 60%,#f97316 85%,#fbbf24 100%);position:relative;overflow:hidden;flex-shrink:0}
+.sb-top::before{content:'';position:absolute;top:-28px;right:-18px;width:90px;height:90px;background:rgba(255,255,255,.11);border-radius:50%}
+.sb-top::after{content:'';position:absolute;bottom:-22px;left:-12px;width:70px;height:70px;background:rgba(255,255,255,.07);border-radius:50%}
+.sb-logo{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid rgba(255,255,255,.3);flex-shrink:0}
+.sb-mid{flex:1;overflow-y:auto;padding:10px 8px}
+.sb-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:8px 8px 4px}
+.mi{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;font-size:12.5px;font-weight:500;color:var(--t2);cursor:pointer;transition:all .18s;border:1px solid transparent;text-decoration:none;margin-bottom:1px;position:relative}
+.mi:hover{background:rgba(249,115,22,.09);color:var(--o600);border-color:rgba(249,115,22,.18)}
+.mi.active{background:rgba(249,115,22,.12);color:var(--o600);border-color:rgba(249,115,22,.22);font-weight:600}
+.mi .ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.mi .xb{display:none;position:absolute;right:6px;width:20px;height:20px;border-radius:5px;background:rgba(239,68,68,.1);color:var(--red);border:none;cursor:pointer;font-size:10px;align-items:center;justify-content:center;transition:all .15s}
+.mi:hover .xb{display:flex}
+.mi .xb:hover{background:var(--red);color:#fff}
+.sb-bot{padding:10px;border-top:1px solid var(--bd);flex-shrink:0}
+.addbtn{width:100%;background:transparent;border:1.5px dashed rgba(251,146,60,.45);color:var(--o500);border-radius:10px;padding:8px;font-size:12px;font-weight:500;font-family:'Prompt',sans-serif;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px}
+.addbtn:hover{background:rgba(249,115,22,.07);border-color:var(--o400)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;font-family:'Prompt',sans-serif;border:none;cursor:pointer;transition:all .18s;white-space:nowrap}
+.btn-o{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;box-shadow:var(--sho)}
+.btn-o:hover{transform:translateY(-1px);box-shadow:0 8px 26px -4px rgba(234,88,12,.5)}
+.btn-o:active{transform:none}
+.btn-gh{background:var(--sf2);border:1.5px solid var(--bd);color:var(--o600)}
+.btn-gh:hover{border-color:var(--o400);box-shadow:0 3px 10px -2px rgba(234,88,12,.2)}
+.btn-rd{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.btn-rd:hover{background:var(--red);color:#fff}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:8px}
+.btn-lg{padding:11px 22px;font-size:14px}
+.btn-fw{width:100%}
+.btn-pill{border-radius:50px}
+.btn-ic{padding:0;width:32px;height:32px;border-radius:8px}
+
+/* INPUTS */
+.inp{width:100%;background:var(--sf2);border:1.5px solid var(--bd2);border-radius:10px;padding:9px 13px;font-size:13px;font-family:'Prompt',sans-serif;color:var(--t1);transition:all .2s;outline:none}
+.inp:focus{border-color:var(--o500);box-shadow:0 0 0 3px rgba(249,115,22,.13)}
+.inp::placeholder{color:var(--t3)}
+select.inp{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;appearance:none}
+.lbl{display:block;font-size:11.5px;font-weight:700;color:var(--o700);margin-bottom:5px;letter-spacing:.02em}
+[data-theme=dark] .lbl{color:var(--o400)}
+.fsec{background:var(--o50);border-radius:12px;padding:13px;border:1px solid rgba(234,88,12,.12)}
+[data-theme=dark] .fsec{background:rgba(251,146,60,.05)}
+
+/* TOPBAR */
+#topbar{border-radius:14px;padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.srch{position:relative;flex:1;min-width:180px}
+.srch input{padding-left:36px;border-radius:50px;position:relative}
+.srch-ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--o400);font-size:14px;pointer-events:none}
+
+/* FILTER BAR */
+#filterBar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ftab{padding:5px 13px;border-radius:50px;font-size:12px;font-weight:600;font-family:'Prompt',sans-serif;border:1.5px solid var(--bd2);background:var(--sf2);color:var(--t2);cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:5px}
+.ftab:hover{border-color:var(--o400);color:var(--o600)}
+.ftab.on{background:linear-gradient(135deg,rgba(249,115,22,.14),rgba(234,88,12,.08));color:var(--o600);border-color:rgba(249,115,22,.3)}
+.ftab .cnt{background:rgba(234,88,12,.15);color:var(--o600);border-radius:50px;padding:1px 7px;font-size:10px;font-weight:700}
+.ftab.on .cnt{background:var(--o500);color:#fff}
+
+/* CATEGORY */
+.cat-urgent  {--cc:#ef4444;--cl:rgba(239,68,68,.08);--cb:rgba(239,68,68,.2)}
+.cat-general {--cc:#f97316;--cl:rgba(249,115,22,.08);--cb:rgba(249,115,22,.2)}
+.cat-training{--cc:#8b5cf6;--cl:rgba(139,92,246,.08);--cb:rgba(139,92,246,.2)}
+.cat-promo   {--cc:#22c55e;--cl:rgba(34,197,94,.08);--cb:rgba(34,197,94,.2)}
+.cat-meeting {--cc:#3b82f6;--cl:rgba(59,130,246,.08);--cb:rgba(59,130,246,.2)}
+.cat-info    {--cc:#f59e0b;--cl:rgba(245,158,11,.08);--cb:rgba(245,158,11,.2)}
+
+/* CARDS */
+#annGrid.gv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding-bottom:24px}
+#annGrid.lv{display:flex;flex-direction:column;gap:8px;padding-bottom:24px}
+.ann-card{background:var(--sf2);border-radius:14px;overflow:hidden;border:1px solid var(--bd2);transition:transform .25s cubic-bezier(.34,1.3,.64,1),box-shadow .25s;box-shadow:0 2px 8px -2px rgba(0,0,0,.08);position:relative;cursor:default}
+.ann-card::before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);transform:translateX(-130%);transition:transform .5s;z-index:2;pointer-events:none;border-radius:14px}
+[data-theme=dark] .ann-card::before{background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.05) 50%,transparent 70%)}
+.ann-card:hover::before{transform:translateX(130%)}
+.ann-card:hover{transform:translateY(-3px) scale(1.012);box-shadow:0 12px 32px -6px rgba(0,0,0,.14),0 0 0 1px var(--cc,var(--o400))}
+.ann-card.pinned{border-color:#fbbf24;box-shadow:0 0 0 2px rgba(251,191,36,.3),0 4px 16px -4px rgba(234,88,12,.22)}
+.ann-card.expired{opacity:.55;filter:saturate(.55)}
+.cat-bar{height:5px;background:var(--cc,var(--o500))}
+.lv .ann-card .cat-bar{width:5px;height:auto;position:absolute;left:0;top:0;bottom:0}
+.lv .ann-card:hover{transform:translateX(3px) scale(1)}
+.body{padding:12px 13px 13px;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1}
+.lv .ann-card .body{flex-direction:row;align-items:center;gap:12px;padding:12px 14px 12px 18px}
+.bl{flex:1;min-width:0}
+.br{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.pin-badge{position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:50px;z-index:3;display:flex;align-items:center;gap:3px}
+.ann-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ann-dt{font-size:10px;font-weight:600;color:var(--cc,var(--o500));display:flex;align-items:center;gap:4px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--cc,var(--o400));box-shadow:0 0 5px var(--cc,rgba(249,115,22,.5));flex-shrink:0}
+.ann-ti{font-size:13px;font-weight:700;color:var(--t1);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;transition:color .18s}
+.ann-card:hover .ann-ti{color:var(--cc,var(--o600))}
+.lv .ann-ti{-webkit-line-clamp:1}
+.ann-tx{font-size:11.5px;color:var(--t2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lv .ann-tx{-webkit-line-clamp:1}
+.ann-foot{border-top:1px solid var(--cb,rgba(249,115,22,.12));padding-top:8px;display:flex;flex-direction:column;gap:5px;margin-top:auto}
+.lv .ann-foot{border-top:none;padding-top:0;margin-top:0;flex-direction:row}
+.sbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700}
+.sbadge.new     {background:rgba(20,184,166,.12);color:#0d9488;border:1px solid rgba(20,184,166,.25)}
+.sbadge.ongoing {background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.25)}
+.sbadge.done    {background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.25)}
+.sbadge.expired {background:rgba(163,163,163,.12);color:#737373;border:1px solid rgba(163,163,163,.25)}
+.cbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;background:var(--cl);color:var(--cc);border:1px solid var(--cb)}
+.lbtn{display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:8px;font-size:11px;font-weight:700;color:var(--cc,var(--o600));background:var(--cl,rgba(249,115,22,.08));border:1.5px solid var(--cb,rgba(249,115,22,.2));text-decoration:none;transition:all .22s;position:relative;overflow:hidden}
+.lbtn::before{content:'';position:absolute;inset:0;background:var(--cc,var(--o500));opacity:0;transition:opacity .22s}
+.lbtn:hover::before{opacity:1}
+.lbtn:hover{color:#fff;border-color:transparent;box-shadow:0 4px 14px -3px var(--cc,rgba(234,88,12,.4))}
+.lbtn span,.lbtn svg{position:relative;z-index:1}
+.lbtn svg{width:14px;height:14px;flex-shrink:0;transition:transform .22s}
+.lbtn:hover svg{transform:translateX(2px)}
+.lbtn.dis{opacity:.4;pointer-events:none}
+.card-acts{display:flex;gap:4px;flex-wrap:wrap}
+.ca{padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:'Prompt',sans-serif;border:none;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:3px}
+.ca.pin {background:rgba(249,115,22,.1);color:var(--o600)}
+.ca.pin:hover{background:var(--o500);color:#fff}
+.ca.edit{background:rgba(59,130,246,.1);color:#3b82f6}
+.ca.edit:hover{background:#3b82f6;color:#fff}
+.ca.del {background:rgba(239,68,68,.08);color:var(--red)}
+.ca.del:hover{background:var(--red);color:#fff}
+.unread-dot{width:7px;height:7px;border-radius:50%;background:var(--blu);box-shadow:0 0 6px rgba(59,130,246,.6);flex-shrink:0}
+.nb{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50px;font-size:10px;font-weight:800;padding:1px 5px;min-width:16px;text-align:center;border:2px solid var(--bg);line-height:1.3}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+.ann-card{animation:cardIn .3s cubic-bezier(.34,1.2,.64,1) both;cursor:pointer}
+#annDetailBody .cat-bar{border-radius:20px 20px 0 0!important;margin:-26px -26px 20px!important}
+
+/* STATS */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-box{background:var(--sf2);border:1px solid var(--bd2);border-radius:10px;padding:10px 12px;text-align:center}
+.stat-box .sv{font-size:22px;font-weight:800;color:var(--o500)}
+.stat-box .sl{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* RIGHT COL */
+.sec{border-radius:14px;padding:16px}
+.profav{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--o200),var(--o300));border:2.5px solid var(--sf2);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:var(--sho);flex-shrink:0}
+.rdot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.rdot.editor{background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff}
+.rb.editor{background:rgba(139,92,246,.12);color:#8b5cf6;border:1px solid rgba(139,92,246,.25)}
+.uav.editor{background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff;box-shadow:0 2px 8px rgba(139,92,246,.3)}
+.rb{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:50px;font-size:11px;font-weight:700}
+.rb.admin {background:rgba(234,88,12,.1);color:var(--o600);border:1px solid rgba(234,88,12,.2)}
+.rb.user  {background:rgba(251,146,60,.1);color:var(--o500);border:1px solid rgba(251,146,60,.2)}
+.rb.viewer{background:var(--bd2);color:var(--t2);border:1px solid var(--bd2)}
+
+/* MODALS */
+.mbk{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:100;display:flex;align-items:center;justify-content:center;padding:14px}
+.mbk.h{display:none}
+.mbox{background:var(--sf2);border-radius:20px;padding:26px;width:100%;max-width:440px;box-shadow:var(--shd);position:relative;animation:mIn .24s cubic-bezier(.34,1.5,.64,1);border:1px solid var(--bd2);max-height:92vh;overflow-y:auto}
+.mbox.w{max-width:540px}
+.mbox.xl{max-width:720px}
+@keyframes mIn{from{opacity:0;transform:scale(.91) translateY(16px)}to{opacity:1;transform:none}}
+.mcl{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;background:var(--bd2);border:none;cursor:pointer;color:var(--t2);font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .18s}
+.mcl:hover{background:var(--t3);color:#fff}
+.mhero{width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,var(--o50),var(--o100));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+[data-theme=dark] .mhero{background:rgba(251,146,60,.15)}
+
+/* USER TABLE */
+.urow{display:grid;grid-template-columns:38px 1fr 100px 80px 64px;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;transition:background .15s;font-size:13px}
+.urow:hover{background:rgba(249,115,22,.05)}
+.urow.hd{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--bd2);padding-bottom:6px;margin-bottom:2px}
+.urow.hd:hover{background:transparent}
+.uav{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.uav.admin{background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;box-shadow:0 2px 8px rgba(234,88,12,.3)}
+.uav.user {background:linear-gradient(135deg,#fdba74,#fb923c);color:#fff}
+.uav.viewer{background:var(--bd2);color:var(--t2)}
+.ua{width:26px;height:26px;border-radius:7px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transition:all .15s}
+.ua.e{background:rgba(59,130,246,.1);color:#3b82f6}
+.ua.e:hover{background:#3b82f6;color:#fff}
+.ua.d{background:rgba(239,68,68,.08);color:var(--red)}
+.ua.d:hover{background:var(--red);color:#fff}
+
+/* CHART */
+.chart-bar-row{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.chart-bar-lbl{width:90px;text-align:right;color:var(--t2);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-bar-track{flex:1;height:20px;background:var(--bd2);border-radius:50px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:50px;background:linear-gradient(90deg,var(--o400),var(--o600));transition:width .7s cubic-bezier(.34,1,.64,1)}
+.chart-bar-val{width:28px;font-size:11px;font-weight:700;color:var(--o600);text-align:right}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed rgba(249,115,22,.35);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(249,115,22,.03)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--o500);background:rgba(249,115,22,.07)}
+.file-chip{display:flex;align-items:center;gap:6px;background:var(--o50);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--o600);margin-top:4px}
+[data-theme=dark] .file-chip{background:rgba(249,115,22,.1)}
+
+/* TOGGLE */
+.tgl-row{display:flex;align-items:center;gap:8px}
+.tgl{width:36px;height:20px;border-radius:50px;background:var(--bd2);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.tgl.on{background:var(--o500)}
+.tgl::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tgl.on::after{transform:translateX(16px)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--t1);color:var(--bg);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--shd);animation:toastIn .3s ease;display:flex;align-items:center;gap:8px}
+@keyframes toastIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* SYNC STATUS */
+#syncStatus{font-size:11px;display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:50px;font-weight:600}
+#syncStatus.ok {background:rgba(34,197,94,.12);color:#16a34a}
+#syncStatus.err{background:rgba(239,68,68,.12);color:var(--red)}
+#syncStatus.loading{background:rgba(245,158,11,.12);color:#d97706}
+
+/* PAGE TITLE */
+.page-ti{font-size:20px;font-weight:800;color:var(--t1);display:flex;align-items:center;gap:11px}
+.ptico{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#fbbf24,#f97316,#c2410c);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:var(--sho);flex-shrink:0}
+
+/* HISTORY */
+.hist-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd2);font-size:12px;color:var(--t2)}
+.hist-item:last-child{border-bottom:none}
+.hist-dot{width:7px;height:7px;border-radius:50%;background:var(--o400);margin-top:4px;flex-shrink:0}
+
+.hidden{display:none!important}
+@media(max-width:1100px){#rcol{display:none}}
+
+/* ===== MOBILE ===== */
+@media(max-width:768px){
+  #wrap{flex-direction:column;padding:0;gap:0}
+  #sb{display:none} /* ซ่อน sidebar ปกติ ใช้ bottom nav แทน */
+  #main{padding:12px 12px 90px;gap:10px} /* padding-bottom สำหรับ bottom nav */
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  #topbar{border-radius:0;border-left:none;border-right:none;border-top:none;padding:8px 12px}
+  .page-ti{font-size:17px}
+  #annGrid.gv{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .mbox{border-radius:20px 20px 0 0;position:fixed;bottom:0;left:0;right:0;max-width:100%;max-height:90vh;padding:20px 20px 32px;animation:mSlideUp .28s cubic-bezier(.34,1.2,.64,1)}
+  .mbox.w,.mbox.xl{max-width:100%}
+  @keyframes mSlideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:none}}
+  .mbk{align-items:flex-end;padding:0}
+}
+
+/* MOBILE BOTTOM NAV */
+#mobileNav{display:none}
+@media(max-width:768px){
+  #mobileNav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:90;
+    background:var(--sf);backdrop-filter:blur(20px) saturate(1.5);
+    border-top:1px solid var(--bd);
+    padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+    gap:0;box-shadow:0 -4px 20px rgba(0,0,0,.1)
+  }
+}
+.mnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:6px 4px;border:none;background:transparent;cursor:pointer;
+  font-family:'Prompt',sans-serif;font-size:9px;font-weight:600;color:var(--t3);
+  border-radius:12px;transition:all .18s;position:relative}
+.mnav-btn.active{color:var(--o600)}
+.mnav-btn.active .mnav-ico{background:rgba(249,115,22,.12)}
+.mnav-ico{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .18s}
+.mnav-btn:active .mnav-ico{transform:scale(.9)}
+.mnav-badge{position:absolute;top:4px;right:calc(50% - 22px);background:var(--red);color:#fff;
+  border-radius:50px;font-size:9px;font-weight:800;padding:1px 5px;min-width:15px;
+  text-align:center;border:2px solid var(--bg);line-height:1.3}
+
+/* MOBILE DRAWER */
+#mobileDrawer{display:none}
+@media(max-width:768px){
+  #mobileDrawer{
+    display:block;position:fixed;inset:0;z-index:95;pointer-events:none
+  }
+  #mobileDrawer.open{pointer-events:all}
+  #drawerBg{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+    opacity:0;transition:opacity .25s}
+  #mobileDrawer.open #drawerBg{opacity:1}
+  #drawerPanel{position:absolute;left:0;top:0;bottom:0;width:280px;
+    background:var(--sf2);box-shadow:4px 0 20px rgba(0,0,0,.15);
+    transform:translateX(-100%);transition:transform .28s cubic-bezier(.34,1.2,.64,1);
+    display:flex;flex-direction:column;overflow:hidden}
+  #mobileDrawer.open #drawerPanel{transform:translateX(0)}
+  #drawerTop{padding:20px 16px 16px;background:linear-gradient(145deg,#7c2d12 0%,#c2410c 30%,#ea580c 60%,#f97316 85%,#fbbf24 100%);position:relative;overflow:hidden;flex-shrink:0}
+  #drawerTop::before{content:'';position:absolute;top:-20px;right:-15px;width:80px;height:80px;background:rgba(255,255,255,.1);border-radius:50%}
+  #drawerMenus{flex:1;overflow-y:auto;padding:10px 8px}
+  #drawerBot{padding:12px;border-top:1px solid var(--bd);flex-shrink:0}
+}
+
+/* ===== REVISION NOTIFICATION ===== */
+#revNotifBanner{display:none;border-radius:14px;padding:13px 16px;margin-bottom:12px;
+  background:linear-gradient(135deg,#dc2626 0%,#b91c1c 50%,#991b1b 100%);
+  border:1px solid rgba(239,68,68,.4);box-shadow:0 4px 20px -4px rgba(239,68,68,.5),0 0 0 1px rgba(255,255,255,.08) inset;
+  animation:revSlideIn .4s cubic-bezier(.34,1.3,.64,1)}
+@keyframes revSlideIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes revGlow{0%,100%{box-shadow:0 4px 20px -4px rgba(239,68,68,.5)}50%{box-shadow:0 4px 28px -2px rgba(239,68,68,.8)}}
+.rev-banner-pulse{animation:revGlow 2.5s ease-in-out infinite}
+#myRevSbBtn{display:none}
+.my-rev-card{border:1.5px solid rgba(239,68,68,.2);border-radius:14px;overflow:hidden;background:var(--sf2);margin-bottom:10px;transition:box-shadow .2s}
+.my-rev-card:hover{box-shadow:0 4px 20px -4px rgba(239,68,68,.3)}
+.rev-reason-box{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:11px 14px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" style="position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+  <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#fbbf24,#f97316,#c2410c);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:var(--sho);animation:pulse 1.5s ease-in-out infinite">⚡</div>
+  <div style="font-size:16px;font-weight:900;color:var(--t1);letter-spacing:-.3px">Branch<span style="color:var(--o500)">Flow</span></div>
+  <div style="font-size:11px;color:var(--o400);font-weight:600;letter-spacing:.08em">BRANCH COMMUNICATION HUB</div>
+  <div style="font-size:12px;color:var(--t3)">กำลังโหลด BranchFlow...</div>
+  <style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}</style>
+</div>
+
+<div id="wrap">
+<!-- SIDEBAR -->
+<aside id="sb" class="glass">
+  <div class="sb-top">
+    <div style="display:flex;align-items:center;gap:11px;position:relative;z-index:1">
+      <div class="sb-logo">⚡</div>
+      <div>
+        <div style="font-size:15px;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-.3px">Branch<span style="color:#fde68a">Flow</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.7);margin-top:1px">ส่งเร็ว · ตามสด · ไม่มีตก</div>
+      </div>
+    </div>
+  </div>
+  <div class="sb-mid">
+    <div class="sb-lbl">🔗 ลิงก์ด่วน</div>
+    <nav id="menuCont"></nav>
+    <button onclick="openM('addMenuM')" class="addbtn admin-only hidden">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>เพิ่มเมนู
+    </button>
+  </div>
+  <div class="sb-bot admin-only hidden" style="flex-direction:column;gap:6px">
+    <button onclick="openAddAnn()" class="btn btn-o btn-fw" style="border-radius:10px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>เพิ่มประกาศ
+    </button>
+    <button onclick="openFileInbox()" class="btn btn-fw editor-only hidden" style="border-radius:10px;background:rgba(139,92,246,.1);border:1.5px solid rgba(139,92,246,.25);color:#8b5cf6">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>กล่องรับไฟล์
+      <span id="inboxBadge" class="hidden" style="background:#8b5cf6;color:#fff;border-radius:50px;font-size:10px;font-weight:800;padding:1px 6px;margin-left:2px">0</span>
+    </button>
+    <button onclick="openUserMgmt()" class="btn btn-gh btn-fw" style="border-radius:10px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>จัดการผู้ใช้งาน
+    </button>
+    <button onclick="openBranchMgmt()" class="btn btn-gh btn-fw" style="border-radius:10px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>จัดการสาขา
+    </button>
+    <button onclick="openDash()" class="btn btn-gh btn-fw" style="border-radius:10px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+    </button>
+    <button onclick="openWorkReport()" class="btn btn-fw" style="border-radius:10px;background:rgba(59,130,246,.1);border:1.5px solid rgba(59,130,246,.25);color:#3b82f6">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      รายงานสถานะงาน
+      <span id="pendingRevBadge" class="hidden" style="background:var(--red);color:#fff;border-radius:50px;font-size:10px;font-weight:800;padding:1px 6px;margin-left:2px">0</span>
+    </button>
+    <button onclick="openM('templateM');loadTemplates()" class="btn btn-gh btn-fw" style="border-radius:10px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Template ประกาศ
+    </button>
+    <button onclick="openLineSettings()" class="btn btn-fw" style="border-radius:10px;background:rgba(34,197,94,.08);border:1.5px solid rgba(34,197,94,.25);color:#16a34a;position:relative">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      ตั้งค่า LINE แจ้งเตือน
+      <span id="lineStatusDot" style="width:7px;height:7px;border-radius:50%;background:var(--t3);flex-shrink:0;display:inline-block;margin-left:2px"></span>
+    </button>
+    <button id="installPWABtn" onclick="installPWA()" class="btn btn-fw hidden" style="border-radius:10px;background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(139,92,246,.06));border:1.5px solid rgba(139,92,246,.25);color:#8b5cf6">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>ติดตั้งแอป 📱
+    </button>
+  </div>
+  <!-- USER: งานที่ต้องแก้ไข -->
+  <div id="myRevSbBtn" style="padding:10px;border-top:1px solid var(--bd);flex-shrink:0">
+    <button onclick="openMyRevisions()" class="btn btn-fw rev-banner-pulse" style="border-radius:10px;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.28);color:var(--red);position:relative">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+      งานที่ต้องแก้ไข
+      <span id="myRevSbBadge" class="hidden" style="background:var(--red);color:#fff;border-radius:50px;font-size:10px;font-weight:800;padding:1px 7px;margin-left:4px">0</span>
+    </button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <!-- REVISION NOTIFICATION BANNER (สำหรับสาขา) -->
+  <div id="revNotifBanner"></div>
+  <div id="topbar" class="glass">
+    <div class="srch">
+      <span class="srch-ic">🔍</span>
+      <input type="search" id="searchQ" class="inp" placeholder="ค้นหาด่วน... (ประกาศ / หัวข้อ)" onkeyup="renderCards()" style="border-radius:50px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="search_q" role="searchbox">
+    </div>
+    <div style="display:flex;gap:4px">
+      <button class="btn btn-ic btn-gh" id="gridBtn" onclick="setView('gv')" title="Grid">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="btn btn-ic btn-gh" id="listBtn" onclick="setView('lv')" title="List">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
+    <button onclick="toggleSort()" class="btn btn-gh btn-pill btn-sm" style="gap:4px">
+      <span id="sortIco">↓</span><span id="sortTxt">ล่าสุด</span>
+    </button>
+    <div id="syncStatus" class="loading">⏳ กำลังเชื่อมต่อ...</div>
+    <button onclick="toggleDark()" class="btn btn-ic btn-gh" id="darkBtn" title="Dark Mode">🌙</button>
+  </div>
+
+  <div class="stat-row" id="statRow"></div>
+  <div id="filterBar"></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px">
+    <div>
+      <h2 class="page-ti"><div class="ptico">⚡</div>กระดานประกาศสาขา</h2>
+      <div style="font-size:12px;color:var(--t3);margin-top:4px;padding-left:51px">
+        แสดง <strong id="showCount" style="color:var(--o500)">0</strong> รายการ
+        <span id="branchLbl" style="color:var(--o600);font-weight:600"></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button onclick="loadAnns(true)" class="btn btn-gh btn-sm">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>รีเฟรช
+      </button>
+      <button onclick="exportCSV()" class="btn btn-gh btn-sm admin-only hidden">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+      </button>
+    </div>
+  </div>
+  <div id="annGrid" class="gv"></div>
+</main>
+
+<!-- RIGHT COL -->
+<aside id="rcol">
+  <div class="glass sec">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div class="profav">👤</div>
+      <div id="profInfo" style="flex:1;min-width:0"></div>
+    </div>
+  </div>
+  <div class="glass sec">
+    <div style="font-size:13px;font-weight:700;margin-bottom:11px;display:flex;align-items:center;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--bd)">🛡️ ระดับสิทธิ์</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:9px">
+        <div class="rdot admin">A</div><div><div style="font-weight:700;font-size:12.5px">Admin</div><div style="color:var(--t3);font-size:10.5px">จัดการทุกอย่างได้</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:9px">
+        <div class="rdot editor">E</div><div><div style="font-weight:700;font-size:12.5px">Editor</div><div style="color:var(--t3);font-size:10.5px">ดูไฟล์แนบ / เปิดลิงก์</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:9px">
+        <div class="rdot user">U</div><div><div style="font-weight:700;font-size:12.5px">User</div><div style="color:var(--t3);font-size:10.5px">ส่งไฟล์ / เปิดลิงก์</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:9px">
+        <div class="rdot viewer">V</div><div><div style="font-weight:700;font-size:12.5px">Viewer</div><div style="color:var(--t3);font-size:10.5px">ดูได้อย่างเดียว</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="glass sec" style="background:linear-gradient(135deg,rgba(255,247,237,.95),rgba(255,237,213,.7))">
+    <div style="font-size:11px;font-weight:700;color:var(--o600);margin-bottom:5px">📍 สาขาที่คุณดูแล</div>
+    <div id="myBranchDisp" style="font-size:14px;font-weight:800;color:var(--t1)">—</div>
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px">
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600">
+        <span id="supabaseStatusDot" style="width:7px;height:7px;border-radius:50%;background:#a3a3a3;flex-shrink:0;transition:background .3s"></span>
+        <span id="supabaseStatusTxt" style="color:var(--t3)">Supabase — กำลังเชื่อมต่อ...</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600">
+        <span id="driveStatusDot" style="width:7px;height:7px;border-radius:50%;background:#a3a3a3;flex-shrink:0;transition:background .3s"></span>
+        <span id="driveStatusTxt" style="color:var(--t3)">Google Drive — ยังไม่ได้ทดสอบ</span>
+      </div>
+    </div>
+  </div>
+</aside>
+</div>
+
+<!-- ===== MODALS ===== -->
+<!-- LOGIN -->
+<div id="loginM" class="mbk h">
+  <div class="mbox">
+    <button onclick="closeM('loginM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div class="mhero">🔐</div>
+      <div><div style="font-size:17px;font-weight:800">เข้าสู่ระบบ</div><div style="font-size:11px;color:var(--t3)">ยินดีต้อนรับกลับมา 👋</div></div>
+    </div>
+    <form id="loginForm" style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="lbl">Username</label><input type="text" id="liU" required class="inp" placeholder="กรอก username"></div>
+      <div><label class="lbl">Password</label><input type="password" id="liP" required class="inp" placeholder="กรอก password"></div>
+      <p id="liErr" class="hidden" style="font-size:12px;color:var(--red);background:#fef2f2;padding:8px 12px;border-radius:8px;text-align:center">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</p>
+      <button type="submit" class="btn btn-o btn-fw btn-lg">ลงชื่อเข้าใช้</button>
+    </form>
+  </div>
+</div>
+
+<!-- ADD/EDIT ANN -->
+<div id="annM" class="mbk h">
+  <div class="mbox w">
+    <button onclick="closeM('annM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div class="mhero">📢</div>
+      <div><div id="annMTi" style="font-size:17px;font-weight:800;color:var(--o600)">สร้างประกาศใหม่</div><div style="font-size:11px;color:var(--t3)">กระจายข้อมูลถึงสาขาแบบเรียลไทม์</div></div>
+    </div>
+    <form id="annForm" style="display:flex;flex-direction:column;gap:12px">
+      <input type="hidden" id="annEId">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="lbl">หมวดหมู่ *</label>
+          <select id="annCat" class="inp">
+            <option value="urgent">🔴 งานด่วน</option>
+            <option value="general" selected>🟠 ทั่วไป</option>
+            <option value="training">🟣 อบรม</option>
+            <option value="promo">🟢 โปรโมชัน</option>
+            <option value="meeting">🔵 ประชุม</option>
+            <option value="info">🟡 แจ้งทราบ</option>
+          </select></div>
+        <div><label class="lbl">สถานะ *</label>
+          <select id="annStatus" class="inp">
+            <option value="new">🔵 ใหม่</option>
+            <option value="ongoing">🟡 กำลังดำเนินการ</option>
+            <option value="done">🟢 เสร็จแล้ว</option>
+          </select></div>
+      </div>
+      <div><label class="lbl">หัวข้อ *</label><input type="text" id="annTi" required class="inp" placeholder="หัวข้อประกาศ"></div>
+      <div><label class="lbl">รายละเอียด *</label><textarea id="annCo" required rows="3" class="inp" style="resize:vertical"></textarea></div>
+      <div class="fsec">
+        <label class="lbl">📍 ส่งถึงสาขา</label>
+        <div style="display:flex;gap:5px;margin-bottom:8px">
+          <button type="button" onclick="selBr(true)" class="btn btn-sm btn-gh">ทั้งหมด</button>
+          <button type="button" onclick="selBr(false)" class="btn btn-sm btn-gh">ล้าง</button>
+        </div>
+        <div id="brCkList" style="display:flex;flex-wrap:wrap;gap:5px;max-height:90px;overflow-y:auto"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="lbl">วันหมดอายุ</label><input type="date" id="annExp" class="inp"></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+          <div class="tgl-row"><button type="button" id="pinTgl" class="tgl" onclick="this.classList.toggle('on')"></button><span style="font-size:12px">📌 ปักหมุด</span></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div style="font-size:10px;font-weight:700;color:var(--o600);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">📎 แนบลิงก์</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label class="lbl">URL</label><input type="url" id="annLi" class="inp" placeholder="https://..."></div>
+          <div><label class="lbl">ชื่อปุ่ม</label><input type="text" id="annLn" class="inp" placeholder="เช่น ดูคู่มือ"></div>
+        </div>
+      </div>
+      <div class="tgl-row fsec" style="gap:10px">
+        <button type="button" id="reqFileTgl" class="tgl" onclick="this.classList.toggle('on')"></button>
+        <div><div style="font-size:12px;font-weight:700">📤 ให้พนักงานแนบไฟล์ตอบกลับ</div><div style="font-size:10.5px;color:var(--t3)">รูป / PDF / Excel</div></div>
+      </div>
+      <!-- AUTO COMPLETE -->
+      <div class="fsec" style="background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.2)">
+        <div class="tgl-row" style="gap:10px;margin-bottom:10px">
+          <button type="button" id="autoCompTgl" class="tgl" onclick="this.classList.toggle('on');toggleAutoComplete()"></button>
+          <div><div style="font-size:12px;font-weight:700;color:#16a34a">✅ เปลี่ยนสถานะเป็น "เสร็จแล้ว" อัตโนมัติ</div>
+            <div style="font-size:10.5px;color:var(--t3)">เมื่อทุกสาขาที่กำหนดส่งไฟล์ครบ</div></div>
+        </div>
+        <div id="reqBranchWrap" style="display:none">
+          <label class="lbl">สาขาที่ต้องส่ง (ปล่อยว่าง = ทุกสาขาในประกาศ)</label>
+          <div id="reqBrCkList" style="display:flex;flex-wrap:wrap;gap:5px;max-height:80px;overflow-y:auto;margin-top:6px"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button type="button" onclick="closeM('annM')" class="btn btn-gh btn-fw" style="border-radius:10px">ยกเลิก</button>
+        <button type="submit" id="annSubBtn" class="btn btn-o btn-fw btn-lg">โพสต์ประกาศ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- VIEW ANN -->
+<div id="viewAnnM" class="mbk h">
+  <div class="mbox w"><button onclick="closeM('viewAnnM')" class="mcl">✕</button><div id="viewAnnCont"></div></div>
+</div>
+
+<!-- REVISION REQUEST MODAL -->
+<div id="revisionM" class="mbk h">
+  <div class="mbox">
+    <button onclick="closeM('revisionM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div class="mhero" style="background:linear-gradient(135deg,rgba(239,68,68,.12),rgba(239,68,68,.06))">🔄</div>
+      <div><div style="font-size:16px;font-weight:800;color:var(--red)">ขอให้แก้ไขงาน</div>
+        <div id="revAnnTitle" style="font-size:11px;color:var(--t3)"></div></div>
+    </div>
+    <form id="revisionForm" style="display:flex;flex-direction:column;gap:12px">
+      <input type="hidden" id="revAnnId">
+      <div>
+        <label class="lbl">เลือกสาขาที่ต้องแก้ไข *</label>
+        <div id="revBranchList" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-top:6px"></div>
+      </div>
+      <div>
+        <label class="lbl">เหตุผล / สิ่งที่ต้องแก้ไข *</label>
+        <textarea id="revReason" required rows="3" class="inp" style="resize:vertical" placeholder="ระบุรายละเอียดที่ต้องแก้ไข..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="closeM('revisionM')" class="btn btn-gh btn-fw" style="border-radius:10px">ยกเลิก</button>
+        <button type="submit" class="btn btn-fw btn-lg" style="border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 14px -3px rgba(239,68,68,.4)">🔄 ส่งคำขอแก้ไข</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- WORK REPORT MODAL -->
+<div id="workReportM" class="mbk h">
+  <div class="mbox xl">
+    <button onclick="closeM('workReportM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:13px;margin-bottom:18px">
+      <div class="mhero" style="background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(59,130,246,.06))">📊</div>
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:800">รายงานสถานะงาน</div>
+        <div style="font-size:11px;color:var(--t3)">ติดตามว่าสาขาไหนต้องแก้ไขงานอะไรบ้าง</div>
+      </div>
+      <select id="reportAnnFilter" class="inp" style="width:180px;font-size:12px" onchange="renderWorkReport()">
+        <option value="all">📋 ทุกประกาศ</option>
+      </select>
+    </div>
+    <!-- summary stats -->
+    <div id="reportStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+    <!-- report content -->
+    <div id="reportContent" style="max-height:58vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- ADD MENU -->
+<div id="addMenuM" class="mbk h">
+  <div class="mbox">
+    <button onclick="closeM('addMenuM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><div class="mhero">📌</div><div style="font-size:16px;font-weight:800">เพิ่มเมนูระบบ</div></div>
+    <form id="menuForm" style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="lbl">ชื่อเมนู</label><input type="text" id="mN" required class="inp" placeholder="เช่น รายงานยอดขาย, คลังสินค้า..."></div>
+      <div><label class="lbl">ไอคอน (Emoji)</label><input type="text" id="mI" required class="inp" placeholder="📊"></div>
+      <div><label class="lbl">URL</label><input type="url" id="mL" required class="inp" placeholder="https://..."></div>
+      <div style="display:flex;gap:8px"><button type="button" onclick="closeM('addMenuM')" class="btn btn-gh btn-fw" style="border-radius:10px">ยกเลิก</button><button type="submit" class="btn btn-o btn-fw btn-lg">บันทึก</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- BRANCH MGMT -->
+<div id="branchMgmtM" class="mbk h">
+  <div class="mbox">
+    <button onclick="closeM('branchMgmtM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><div class="mhero">🗂️</div><div><div style="font-size:16px;font-weight:800">จัดการสาขา</div><div style="font-size:11px;color:var(--t3)">เพิ่ม / ลบ ชื่อสาขา</div></div></div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <input type="text" id="newBrInp" class="inp" placeholder="ชื่อสาขาใหม่" style="flex:1">
+      <button onclick="addBranch()" class="btn btn-o">เพิ่ม</button>
+    </div>
+    <div id="brList" style="display:flex;flex-direction:column;gap:5px;max-height:380px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- USER MGMT -->
+<div id="userMgmtM" class="mbk h">
+  <div class="mbox xl">
+    <button onclick="closeM('userMgmtM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:13px;margin-bottom:16px">
+      <div class="mhero">👥</div>
+      <div style="flex:1"><div style="font-size:17px;font-weight:800">จัดการผู้ใช้งาน</div><div style="font-size:11px;color:var(--t3)">เพิ่ม แก้ไข กำหนดสิทธิ์และสาขา</div></div>
+      <button onclick="openEditUser(null)" class="btn btn-o btn-sm">＋ เพิ่มผู้ใช้</button>
+    </div>
+    <div class="urow hd"><div></div><div>ชื่อ / Username</div><div>สิทธิ์</div><div>สาขา</div><div>จัดการ</div></div>
+    <div id="utbody" style="display:flex;flex-direction:column;gap:2px"></div>
+  </div>
+</div>
+
+<!-- EDIT USER -->
+<div id="editUserM" class="mbk h">
+  <div class="mbox">
+    <button onclick="closeM('editUserM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px"><div class="mhero">✏️</div><div id="euTi" style="font-size:16px;font-weight:800">แก้ไขผู้ใช้งาน</div></div>
+    <form id="editUserForm" style="display:flex;flex-direction:column;gap:12px">
+      <input type="hidden" id="euId">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="lbl">ชื่อแสดง *</label><input type="text" id="euN" required class="inp"></div>
+        <div><label class="lbl">สาขา</label><select id="euBr" class="inp"></select></div>
+      </div>
+      <div><label class="lbl">Username *</label><input type="text" id="euU" required class="inp"></div>
+      <div><label class="lbl">Password</label><input type="password" id="euP" class="inp" placeholder="ปล่อยว่าง = คงรหัสเดิม"></div>
+      <div><label class="lbl">สิทธิ์ *</label>
+        <select id="euR" class="inp" onchange="updateRolePreview()">
+          <option value="admin">👑 Admin</option>
+          <option value="editor">✏️ Editor</option>
+          <option value="user">👤 User</option>
+          <option value="viewer" selected>👁 Viewer</option>
+        </select></div>
+      <div class="fsec" id="rolePreview" style="font-size:12px;color:var(--t2);line-height:2"></div>
+      <div style="display:flex;gap:8px"><button type="button" onclick="closeM('editUserM')" class="btn btn-gh btn-fw" style="border-radius:10px">ยกเลิก</button><button type="submit" class="btn btn-o btn-fw btn-lg">บันทึก</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- FILE INBOX MODAL -->
+<div id="fileInboxM" class="mbk h">
+  <div class="mbox xl">
+    <button onclick="closeM('fileInboxM')" class="mcl">✕</button>
+    <!-- header -->
+    <div style="display:flex;align-items:center;gap:13px;margin-bottom:14px">
+      <div class="mhero" style="background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(139,92,246,.08))">📂</div>
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:800;color:#8b5cf6">กล่องรับไฟล์</div>
+        <div style="font-size:11px;color:var(--t3)">ไฟล์ที่พนักงานส่งตอบกลับทุกประกาศ</div>
+      </div>
+    </div>
+    <!-- toolbar -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <!-- search -->
+      <div style="position:relative;flex:1;min-width:160px">
+        <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:13px">🔍</span>
+        <input type="text" id="inboxSearch" class="inp" placeholder="ค้นหาชื่อไฟล์ / ผู้ส่ง / สาขา" style="padding-left:34px;border-radius:50px;font-size:12px" oninput="renderInbox()">
+      </div>
+      <!-- ann filter -->
+      <select id="inboxAnnFilter" class="inp" style="width:170px;font-size:12px" onchange="renderInbox()">
+        <option value="all">📋 ทุกประกาศ</option>
+      </select>
+      <!-- branch filter -->
+      <select id="inboxBranchFilter" class="inp" style="width:140px;font-size:12px" onchange="renderInbox()">
+        <option value="all">🏪 ทุกสาขา</option>
+      </select>
+      <!-- view mode -->
+      <select id="inboxViewMode" class="inp" style="width:130px;font-size:12px" onchange="renderInbox()">
+        <option value="list">📋 จัดกลุ่ม</option>
+        <option value="grid">🖼 Grid รูปภาพ</option>
+        <option value="branch">🏪 สถานะสาขา</option>
+      </select>
+      <button onclick="renderInbox()" class="btn btn-sm btn-gh" style="border-radius:8px;flex-shrink:0">🔄</button>
+    </div>
+    <!-- stats -->
+    <div id="inboxStats" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap"></div>
+    <!-- list -->
+    <div id="inboxList" style="display:flex;flex-direction:column;gap:4px;max-height:58vh;overflow-y:auto;padding-right:4px;min-height:60px"></div>
+  </div>
+</div>
+
+<!-- MY REVISION TASKS (สาขา) -->
+<div id="myRevisionM" class="mbk h">
+  <div class="mbox w" style="max-height:90vh;overflow-y:auto">
+    <button onclick="closeM('myRevisionM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <div class="mhero" style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(239,68,68,.07));font-size:26px">🔄</div>
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:800;color:var(--red)">งานที่ต้องแก้ไข</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:1px">รายการที่ Admin ขอให้ส่งงานแก้ไขกลับมา</div>
+      </div>
+      <button onclick="loadMyRevisions().then(()=>openMyRevisions())" class="btn btn-sm btn-gh" style="border-radius:8px;flex-shrink:0">🔄</button>
+    </div>
+    <!-- info box -->
+    <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.18);border-radius:11px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:8px">
+      <span style="font-size:16px;flex-shrink:0;margin-top:1px">💡</span>
+      <div style="font-size:12px;color:var(--t2);line-height:1.7">กรุณาอ่านเหตุผลที่ Admin แจ้ง แล้วกด <strong style="color:var(--red)">ส่งงานแก้ไข</strong> เพื่ออัปโหลดไฟล์ที่แก้ไขแล้วกลับค่ะ ระบบจะปิดรายการนี้โดยอัตโนมัติเมื่อส่งสำเร็จ</div>
+    </div>
+    <!-- list -->
+    <div id="myRevList"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashMd" class="mbk h">
+  <div class="mbox xl"><button onclick="closeM('dashMd')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px"><div class="mhero">📊</div><div style="font-size:17px;font-weight:800">Dashboard สรุป</div></div>
+    <div id="dashCont"></div>
+  </div>
+</div>
+
+<script>
+/* ========== SUPABASE INIT ========== */
+const SB_URL = 'https://jtziauzkgsvcdokbqxcn.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0emlhdXprZ3N2Y2Rva2JxeGNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Mjg1MDAsImV4cCI6MjA5NTQwNDUwMH0.QaBWybMKKgUwoZ3QOT3CEELlJwNKMUQ0V6aIThfctdE';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+// ⚠️ SECURITY: anon key อยู่ใน client — ต้องเปิด RLS บน Supabase ทุกตาราง
+// ⚠️ SECURITY: password เก็บ plaintext ใน hub_users — ควรย้ายไปใช้ Supabase Auth
+
+/* ========== STATE ========== */
+let anns=[], branches=[], users=[], menus=[], readIds=[], pendingFiles={};
+let curUser=null, curRole='viewer', sortDesc=true, curCat='all', curStatus='all', curView='gv';
+try{curUser=JSON.parse(localStorage.getItem('hub_cur'));}catch{}
+if(curUser) curRole=curUser.role;
+try{readIds=JSON.parse(localStorage.getItem('hub_read'))||[];}catch{}
+
+const CATS={all:{label:'ทั้งหมด',icon:'📋'},urgent:{label:'งานด่วน',icon:'🔴'},general:{label:'ทั่วไป',icon:'🟠'},training:{label:'อบรม',icon:'🟣'},promo:{label:'โปรโมชัน',icon:'🟢'},meeting:{label:'ประชุม',icon:'🔵'},info:{label:'แจ้งทราบ',icon:'🟡'}};
+const ROLE_PERMS={
+  admin:  ['✅ เพิ่ม/ลบ/แก้ไขประกาศ','✅ จัดการเมนู/สาขา/ผู้ใช้','✅ ดูไฟล์ตอบกลับทุกสาขา','✅ เปิดลิงก์และโหลดไฟล์','✅ ดูประกาศทั้งหมด'],
+  editor: ['❌ ไม่สามารถแก้ไขประกาศ','❌ ไม่สามารถจัดการระบบ','✅ ดูไฟล์ตอบกลับได้ (เมนูไฟล์แนบ)','✅ เปิดลิงก์และโหลดไฟล์ได้','✅ ดูประกาศทั้งหมด'],
+  user:   ['❌ ไม่สามารถแก้ไขประกาศ','❌ ไม่สามารถจัดการระบบ','✅ ส่งไฟล์ตอบกลับได้','✅ เปิดลิงก์และโหลดไฟล์','✅ ดูประกาศทั้งหมด'],
+  viewer: ['❌ ไม่สามารถแก้ไขประกาศ','❌ ไม่สามารถจัดการระบบ','❌ ไม่สามารถส่งหรือดูไฟล์แนบ','❌ เปิดลิงก์ไม่ได้','✅ ดูประกาศได้เท่านั้น'],
+};
+// helper สิทธิ์
+const canEdit   = ()=>curRole==='admin';
+const canUpload = ()=>curRole==='admin'||curRole==='user';
+const canViewFiles=()=>curRole==='admin'||curRole==='editor';
+const canOpenLink=()=>curRole!=='viewer';
+
+/* ========== HELPERS ========== */
+window.openM  = id => document.getElementById(id).classList.remove('h');
+window.closeM = id => document.getElementById(id).classList.add('h');
+function setSyncStatus(s,msg){const el=document.getElementById('syncStatus');el.className=s;el.textContent=msg;}
+function toast(msg,icon='✅'){
+  const t=document.createElement('div');t.className='toast';t.innerHTML=`<span>${icon}</span><span>${msg}</span>`;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+window.toggleDark=()=>{const d=document.documentElement,on=d.getAttribute('data-theme')==='dark';d.setAttribute('data-theme',on?'light':'dark');document.getElementById('darkBtn').textContent=on?'🌙':'☀️';localStorage.setItem('hub_dark',on?'0':'1');};
+if(localStorage.getItem('hub_dark')==='1'){document.documentElement.setAttribute('data-theme','dark');document.getElementById('darkBtn').textContent='☀️';}
+window.toggleSort=()=>{sortDesc=!sortDesc;document.getElementById('sortIco').textContent=sortDesc?'↓':'↑';document.getElementById('sortTxt').textContent=sortDesc?'ล่าสุด':'เก่าสุด';renderCards();};
+window.setView=v=>{curView=v;document.getElementById('annGrid').className=v;['grid','list'].forEach(n=>{const btn=document.getElementById(n+'Btn');const on=(v==='gv'&&n==='grid')||(v==='lv'&&n==='list');btn.style.background=on?'rgba(249,115,22,.12)':'';btn.style.color=on?'var(--o600)':'';});};
+setView('gv');
+window.vaAlert=e=>{e.preventDefault();toast('กรุณาเข้าสู่ระบบก่อนใช้งาน','⚠️');};
+
+/* ========== CONNECTION STATUS HELPERS ========== */
+function setSupabaseStatus(ok){
+  const dot=document.getElementById('supabaseStatusDot');
+  const txt=document.getElementById('supabaseStatusTxt');
+  if(!dot||!txt) return;
+  if(ok){
+    dot.style.cssText='width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.6);flex-shrink:0;transition:all .3s';
+    txt.style.color='#16a34a'; txt.textContent='Supabase — เชื่อมต่อแล้ว ✓';
+  } else {
+    dot.style.cssText='width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,.5);flex-shrink:0;transition:all .3s';
+    txt.style.color='#ef4444'; txt.textContent='Supabase — เชื่อมต่อไม่ได้ ✗';
+  }
+}
+function setDriveStatus(state){
+  const dot=document.getElementById('driveStatusDot');
+  const txt=document.getElementById('driveStatusTxt');
+  if(!dot||!txt) return;
+  const map={
+    ok:       {bg:'#22c55e',sh:'rgba(34,197,94,.6)', c:'#16a34a', t:'Google Drive — พร้อมใช้งาน ✓'},
+    error:    {bg:'#ef4444',sh:'rgba(239,68,68,.5)',  c:'#ef4444', t:'Google Drive — เชื่อมต่อไม่ได้ ✗'},
+    uploading:{bg:'#f59e0b',sh:'rgba(245,158,11,.5)', c:'#d97706', t:'Google Drive — กำลังอัปโหลด...'},
+    idle:     {bg:'#a3a3a3',sh:'none',                c:'var(--t3)',t:'Google Drive — ยังไม่ได้ใช้งาน'},
+  };
+  const s=map[state]||map.idle;
+  dot.style.cssText=`width:7px;height:7px;border-radius:50%;background:${s.bg};box-shadow:0 0 5px ${s.sh};flex-shrink:0;transition:all .3s`;
+  txt.style.color=s.c; txt.textContent=s.t;
+}
+async function testDriveConnection(){
+  await new Promise(r=>setTimeout(r,500));
+  setDriveStatus('idle');
+  if(!GDRIVE_URL||GDRIVE_URL===''){setDriveStatus('idle');return;}
+  try{
+    // ใช้ no-cors เพราะ Apps Script ไม่รองรับ CORS preflight GET
+    await fetch(GDRIVE_URL,{method:'GET',mode:'no-cors'});
+    // ถ้าไม่ throw = URL ใช้งานได้
+    setDriveStatus('ok');
+  }catch{
+    setDriveStatus('error');
+  }
+}
+
+/* ========== LOAD DATA FROM SUPABASE ========== */
+async function loadAll(){
+  setSyncStatus('loading','⏳ กำลังโหลด...');
+
+  // แสดง skeleton ใน card grid ระหว่างรอ
+  const grid=document.getElementById('annGrid');
+  if(grid) grid.innerHTML=`<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:10px">
+    ${[1,2,3,4].map(()=>`<div style="height:80px;border-radius:14px;background:linear-gradient(90deg,var(--bd2) 25%,var(--sf2) 50%,var(--bd2) 75%);background-size:200% 100%;animation:shimmer 1.2s infinite">
+    </div>`).join('')}
+    <style>@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>
+  </div>`;
+
+  // ปิด loading overlay
+  const ov=document.getElementById('loadingOverlay');
+  if(ov) ov.style.display='none';
+
+  try{
+    const [aBr,aUs,aAn,aMn]=await Promise.all([
+      sb.from('branches').select('*').order('name'),
+      sb.from('hub_users').select('*').order('display_name'),
+      sb.from('announcements').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}),
+      sb.from('menus').select('*').order('sort_order')
+    ]);
+
+    if(aBr.error||aUs.error||aAn.error||aMn.error){
+      console.error('Supabase errors:',aBr.error,aUs.error,aAn.error,aMn.error);
+      throw new Error('load error');
+    }
+
+    branches = aBr.data.map(b=>b.name);
+    users    = aUs.data.map(u=>({id:u.id,username:u.username,pw:u.password,role:u.role,name:u.display_name,branch:u.branch_name}));
+    anns     = aAn.data.map(a=>({id:a.id,title:a.title,content:a.content,cat:a.category,status:a.status,branches:a.branches||['ทุกสาขา'],link:a.link||'',linkName:a.link_name||'เปิดเอกสาร',expiry:a.expiry||'',pinned:a.pinned,reqFile:a.req_file,autoComplete:a.auto_complete||false,requiredBranches:a.required_branches||[],ts:a.created_at,updatedAt:a.updated_at,createdBy:a.created_by,history:a.history||[],pendingRevisions:0}));
+    menus    = aMn.data.map(m=>({id:m.id,name:m.name,icon:m.icon,url:m.url}));
+
+    // โหลด pending revisions count ต่อประกาศ
+    const {data:revCounts}=await sb.from('revision_requests').select('announcement_id').eq('status','pending');
+    if(revCounts){
+      const countMap={};
+      revCounts.forEach(r=>{countMap[r.announcement_id]=(countMap[r.announcement_id]||0)+1;});
+      anns.forEach(a=>{a.pendingRevisions=countMap[a.id]||0;});
+    }
+
+    // cache พร้อม timestamp
+    try{
+      const cacheData={ts:Date.now(),anns,branches,users,menus};
+      localStorage.setItem('hub_cache_v2',JSON.stringify(cacheData));
+    }catch{}
+
+    setSyncStatus('ok','🟢 เชื่อมต่อแล้ว');
+    refreshAll();
+    setSupabaseStatus(true);
+    testDriveConnection();
+
+  }catch(err){
+    console.error('loadAll error:',err);
+    setSyncStatus('err','🔴 ออฟไลน์');
+
+    // โหลด cache ถ้ามี (max 6 ชั่วโมง)
+    try{
+      const raw=localStorage.getItem('hub_cache_v2');
+      if(raw){
+        const c=JSON.parse(raw);
+        const ageH=(Date.now()-(c.ts||0))/(1000*60*60);
+        if(ageH<6){
+          if(c.anns) anns=c.anns;
+          if(c.branches) branches=c.branches;
+          if(c.users) users=c.users;
+          if(c.menus) menus=c.menus;
+        }
+      }
+      // fallback legacy cache keys
+      if(!anns.length){
+        const ca=localStorage.getItem('hub_anns_cache');
+        const cb=localStorage.getItem('hub_branches_cache');
+        const cu=localStorage.getItem('hub_users_cache');
+        const cm=localStorage.getItem('hub_menus_cache');
+        if(ca) anns=JSON.parse(ca);
+        if(cb) branches=JSON.parse(cb);
+        if(cu) users=JSON.parse(cu);
+        if(cm) menus=JSON.parse(cm);
+      }
+    }catch{}
+
+    refreshAll();
+    setSupabaseStatus(false);
+    toast('เชื่อมต่อ Supabase ไม่ได้ — แสดงข้อมูล cache','⚠️');
+  }
+}
+window.loadAnns=async(showToast=false)=>{
+  setSyncStatus('loading','⏳ กำลังโหลด...');
+  const {data,error}=await sb.from('announcements').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false});
+  if(!error){
+    anns=data.map(a=>({id:a.id,title:a.title,content:a.content,cat:a.category,status:a.status,branches:a.branches||['ทุกสาขา'],link:a.link||'',linkName:a.link_name||'เปิดเอกสาร',expiry:a.expiry||'',pinned:a.pinned,reqFile:a.req_file,autoComplete:a.auto_complete||false,requiredBranches:a.required_branches||[],ts:a.created_at,updatedAt:a.updated_at,createdBy:a.created_by,history:a.history||[],pendingRevisions:0}));
+    // โหลด pendingRevisions เหมือนกับ loadAll()
+    const {data:revCounts}=await sb.from('revision_requests').select('announcement_id').eq('status','pending');
+    if(revCounts){
+      const countMap={};
+      revCounts.forEach(r=>{countMap[r.announcement_id]=(countMap[r.announcement_id]||0)+1;});
+      anns.forEach(a=>{a.pendingRevisions=countMap[a.id]||0;});
+    }
+    setSyncStatus('ok','🟢 เชื่อมต่อแล้ว');
+    if(showToast) toast('รีเฟรชข้อมูลแล้วค่ะ');
+    // เช็ค auto-complete สำหรับประกาศที่ยังเปิดอยู่
+    const autoAnns=anns.filter(a=>a.autoComplete&&a.status!=='done');
+    for(const a of autoAnns) await checkAutoComplete(a.id);
+  } else {
+    setSyncStatus('err','🔴 โหลดไม่ได้');
+  }
+  renderCards();renderStats();buildFilterBar();
+};
+
+/* ========== SUPABASE AUTH ========== */
+document.getElementById('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=e.target.querySelector('button[type="submit"]');
+  btn.innerHTML='⏳ กำลังเข้าสู่ระบบ...'; btn.disabled=true;
+  const u=document.getElementById('liU').value.trim();
+  const p=document.getElementById('liP').value;
+  const err=document.getElementById('liErr');
+
+  // ลอง Supabase Auth ก่อน (email format)
+  const isEmail=u.includes('@');
+  let authOk=false;
+
+  if(isEmail){
+    const {data,error}=await sb.auth.signInWithPassword({email:u,password:p});
+    if(!error&&data.user){
+      // ดึง hub_user จาก auth_id หรือ username
+      const {data:hu}=await sb.from('hub_users').select('*').or(`auth_id.eq.${data.user.id},username.eq.${u}`).single();
+      if(hu){
+        curUser={id:hu.id,username:hu.username,pw:'',role:hu.role,name:hu.display_name,branch:hu.branch_name};
+        curRole=hu.role; authOk=true;
+      }
+    }
+  }
+
+  // fallback: username/password ใน hub_users (backward compat)
+  if(!authOk){
+    const found=users.find(x=>x.username===u&&x.pw===p);
+    if(found){ curUser=found; curRole=found.role; authOk=true; }
+  }
+
+  btn.innerHTML='ลงชื่อเข้าใช้'; btn.disabled=false;
+  if(authOk){
+    localStorage.setItem('hub_cur',JSON.stringify(curUser));
+    err.classList.add('hidden'); e.target.reset(); closeM('loginM');
+    refreshAll(); toast(`ยินดีต้อนรับ ${curUser.name} ค่ะ 👋`);
+    checkReminders();
+  } else {
+    err.classList.remove('hidden');
+  }
+});
+
+window.logout=async()=>{
+  if(!confirm('ออกจากระบบ?'))return;
+  await sb.auth.signOut();
+  curUser=null; curRole='viewer';
+  localStorage.removeItem('hub_cur');
+  refreshAll(); toast('ออกจากระบบแล้วค่ะ','👋');
+};
+
+/* ========== REALTIME SUBSCRIPTIONS ========== */
+let _realtimeChannel=null;
+function setupRealtime(){
+  // unsubscribe channel เดิมก่อน (กัน duplicate เมื่อ reconnect)
+  if(_realtimeChannel){
+    try{sb.removeChannel(_realtimeChannel);}catch{}
+    _realtimeChannel=null;
+  }
+  _realtimeChannel=sb.channel('db-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'announcements'},async(payload)=>{
+      console.log('Realtime: announcement change',payload.eventType);
+      await loadAnns();
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ann_comments'},payload=>{
+      const modal=document.getElementById('commentM');
+      if(modal&&!modal.classList.contains('h')){
+        const annId=modal.getAttribute('data-ann-id');
+        if(annId===payload.new.announcement_id) loadComments(annId);
+      }
+    })
+    .subscribe((status)=>{
+      console.log('Realtime status:',status);
+    });
+}
+
+/* ========== REMINDER — แจ้งเตือนก่อนหมดอายุ ========== */
+function checkReminders(){
+  const now=new Date();
+  const soon=anns.filter(a=>{
+    if(!a.expiry||a.status==='done') return false;
+    const exp=new Date(a.expiry);
+    const diff=(exp-now)/(1000*60*60*24);
+    return diff>=0&&diff<=3;
+  });
+  if(!soon.length) return;
+  soon.forEach(a=>{
+    const exp=new Date(a.expiry);
+    const diff=Math.ceil((exp-new Date())/(1000*60*60*24));
+    const msg=diff===0?`⏰ "${a.title}" หมดอายุวันนี้!`:`⏰ "${a.title}" อีก ${diff} วันจะหมดอายุ`;
+    setTimeout(()=>toast(msg,'⏰'),500);
+  });
+}
+
+/* ========== MARK READ + ยืนยันการอ่าน ========== */
+window.markRead=async id=>{
+  // อัปเดต localStorage เสมอ
+  if(!readIds.includes(id)){
+    readIds.push(id);
+    localStorage.setItem('hub_read',JSON.stringify(readIds));
+    renderStats();
+  }
+
+  // บันทึก Supabase ทุกครั้งที่ login (ไม่สนใจ localStorage)
+  if(!curUser) return;
+
+  try{
+    const {data,error}=await sb.from('read_receipts').insert({
+      announcement_id: id,
+      username:        curUser.username||'unknown',
+      display_name:    curUser.name||curUser.username||'ไม่ทราบ',
+      branch_name:     curUser.branch||''
+    }).select();
+
+    if(error){
+      if(error.code==='23505'){
+        // อ่านแล้ว (duplicate) — ปกติ ไม่ต้อง error
+      } else {
+        console.error('markRead ERROR:', error.code, error.message);
+      }
+    }
+  }catch(e){
+    console.error('markRead exception:', e);
+  }
+};
+
+window.openReadReceipts=async annId=>{
+  const ann=anns.find(a=>a.id===annId); if(!ann) return;
+  const {data:receipts,error}=await sb.from('read_receipts').select('*')
+    .eq('announcement_id',annId).order('read_at',{ascending:false});
+  const {data:allReplies}=await sb.from('file_replies').select('id,branch_name')
+    .eq('announcement_id',annId);
+
+  if(error) console.error('read_receipts error',error);
+  const readList=receipts||[];
+
+  // สาขาเป้าหมาย
+  const targetBr=ann.branches?.includes('ทุกสาขา')?[...branches]:
+    (ann.branches||[]).filter(b=>branches.includes(b));
+
+  // สาขาที่ส่งไฟล์มาแล้ว
+  const sentFileBr=[...new Set((allReplies||[]).map(r=>r.branch_name).filter(Boolean))];
+
+  // สาขาที่อ่านแล้ว (จาก read_receipts)
+  const readBr=[...new Set(readList.map(r=>r.branch_name).filter(Boolean))];
+  const unreadBr=targetBr.filter(b=>!readBr.includes(b));
+
+  document.getElementById('readReceiptCont').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div class="mhero">👁</div>
+      <div>
+        <div style="font-size:16px;font-weight:800">สถิติการอ่าน</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">${ann.title}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div class="stat-box"><div class="sv" style="color:var(--grn)">${readBr.length}</div><div class="sl">สาขาอ่านแล้ว</div></div>
+      <div class="stat-box"><div class="sv" style="color:var(--red)">${unreadBr.length}</div><div class="sl">ยังไม่อ่าน</div></div>
+      <div class="stat-box"><div class="sv" style="color:var(--o500)">${sentFileBr.length}</div><div class="sl">ส่งไฟล์แล้ว</div></div>
+    </div>
+    <!-- รายชื่อ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px;max-height:260px;overflow-y:auto">
+        <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px;position:sticky;top:0;background:rgba(240,253,244,.9);padding:2px 0">
+          ✅ อ่านแล้ว (${readList.length} คน)
+        </div>
+        ${readList.length?readList.map(r=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(34,197,94,.1);font-size:11px">
+            <div>
+              <div style="font-weight:600">${r.display_name||r.username}</div>
+              <div style="color:var(--t3);font-size:10px">🏪 ${r.branch_name||'—'}</div>
+            </div>
+            <div style="color:var(--t3);font-size:10px;text-align:right">${new Date(r.read_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+          </div>`).join('')
+        :`<div style="font-size:11px;color:var(--t3);text-align:center;padding:8px">ยังไม่มีคนอ่าน</div>`}
+      </div>
+      <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:12px;padding:12px;max-height:260px;overflow-y:auto">
+        <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px;position:sticky;top:0;background:rgba(254,242,242,.9);padding:2px 0">
+          ⏳ ยังไม่อ่าน (${unreadBr.length} สาขา)
+        </div>
+        ${unreadBr.length?unreadBr.map(b=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(239,68,68,.08);font-size:11px">
+            <span>🏪 ${b}</span>
+            ${sentFileBr.includes(b)?`<span style="background:rgba(34,197,94,.12);color:#16a34a;border-radius:50px;padding:1px 7px;font-size:10px;font-weight:600">ส่งไฟล์แล้ว</span>`:''}
+          </div>`).join('')
+        :`<div style="font-size:11px;color:#16a34a;font-weight:600;text-align:center;padding:8px">✅ ทุกสาขาอ่านแล้ว!</div>`}
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:8px 12px;background:var(--o50);border-radius:10px;font-size:11px;color:var(--o700)">
+      💡 สถานะ "อ่านแล้ว" จะบันทึกเมื่อพนักงาน <strong>login แล้ว</strong> กดเปิดประกาศค่ะ
+    </div>`;
+  openM('readReceiptM');
+};
+
+/* ========== COMMENTS ========== */
+window.openComments=async annId=>{
+  const ann=anns.find(a=>a.id===annId); if(!ann) return;
+  document.getElementById('commentM').setAttribute('data-ann-id',annId);
+  document.getElementById('commentAnnTitle').textContent=ann.title;
+  document.getElementById('commentInput').value='';
+  document.getElementById('commentLoginHint').style.display=curUser?'none':'block';
+  document.getElementById('commentFormEl').style.display=curUser&&curRole!=='viewer'?'flex':'none';
+  await loadComments(annId);
+  openM('commentM');
+};
+
+async function loadComments(annId){
+  const {data}=await sb.from('ann_comments').select('*').eq('announcement_id',annId).order('created_at',{ascending:true});
+  const list=document.getElementById('commentList');
+  if(!data?.length){list.innerHTML=`<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">ยังไม่มีความคิดเห็น</div>`;return;}
+  list.innerHTML=data.map(c=>{
+    const isMe=curUser?.username===c.user_display_name||curUser?.name===c.user_display_name;
+    const dt=new Date(c.created_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    return `<div style="display:flex;gap:8px;margin-bottom:10px;${isMe?'flex-direction:row-reverse':''}">
+      <div style="width:30px;height:30px;border-radius:50%;background:${isMe?'linear-gradient(135deg,#fb923c,#ea580c)':'var(--bd2)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${isMe?'#fff':'var(--t2)'};flex-shrink:0">
+        ${(c.user_display_name||'?')[0].toUpperCase()}</div>
+      <div style="max-width:75%;${isMe?'align-items:flex-end':''}">
+        <div style="font-size:10px;color:var(--t3);margin-bottom:3px;${isMe?'text-align:right':''}">${c.user_display_name} · ${c.branch_name||'—'} · ${dt}</div>
+        <div style="background:${isMe?'linear-gradient(135deg,rgba(249,115,22,.15),rgba(234,88,12,.1))':'var(--sf2)'};border:1px solid ${isMe?'rgba(249,115,22,.25)':'var(--bd2)'};border-radius:${isMe?'14px 14px 4px 14px':'14px 14px 14px 4px'};padding:9px 12px;font-size:13px;color:var(--t1);line-height:1.5">
+          ${c.content}
+        </div>
+      </div>
+      ${curRole==='admin'?`<button onclick="delComment('${c.id}','${annId}')" style="align-self:center;background:none;border:none;cursor:pointer;color:var(--t3);font-size:12px;opacity:0;transition:opacity .2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">✕</button>`:''}
+    </div>`;
+  }).join('');
+  list.scrollTop=list.scrollHeight;
+}
+
+window.delComment=async(cid,annId)=>{
+  if(!confirm('ลบความคิดเห็นนี้?'))return;
+  await sb.from('ann_comments').delete().eq('id',cid);
+  loadComments(annId); toast('ลบแล้วค่ะ','🗑');
+};
+
+document.getElementById('commentFormEl')?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const annId=document.getElementById('commentM').getAttribute('data-ann-id');
+  const txt=document.getElementById('commentInput').value.trim();
+  if(!txt||!curUser) return;
+  const btn=e.target.querySelector('button');
+  btn.disabled=true; btn.innerHTML='⏳';
+  const {error}=await sb.from('ann_comments').insert({
+    announcement_id:annId,
+    user_display_name:curUser.name,
+    branch_name:curUser.branch||'',
+    content:txt
+  });
+  if(!error){document.getElementById('commentInput').value='';loadComments(annId);}
+  btn.disabled=false; btn.innerHTML='ส่ง';
+});
+
+/* ========== TEMPLATES ========== */
+let templates=[];
+async function loadTemplates(){
+  const {data}=await sb.from('ann_templates').select('*').order('created_at',{ascending:false});
+  templates=data||[];
+  renderTemplateList();
+}
+function renderTemplateList(){
+  const c=document.getElementById('templateList'); if(!c) return;
+  c.innerHTML='';
+  if(!templates.length){c.innerHTML=`<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">ยังไม่มี Template</div>`;return;}
+  templates.forEach(t=>{
+    c.insertAdjacentHTML('beforeend',`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--bd2);background:var(--sf2);margin-bottom:5px">
+        <span class="cbadge cat-${t.category}" style="flex-shrink:0">${CATS[t.category]?.icon||'📋'} ${t.name}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title_template||'(ไม่มีหัวข้อ)'}</div>
+          <div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content_template||''}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="useTemplate('${t.id}')" class="btn btn-sm btn-o" style="border-radius:8px">ใช้</button>
+          <button onclick="delTemplate('${t.id}')" class="btn btn-sm btn-rd" style="border-radius:8px">ลบ</button>
+        </div>
+      </div>`);
+  });
+}
+window.useTemplate=id=>{
+  const t=templates.find(x=>x.id===id); if(!t) return;
+  closeM('templateM');
+  openAddAnn();
+  setTimeout(()=>{
+    document.getElementById('annTi').value=t.title_template||'';
+    document.getElementById('annCo').value=t.content_template||'';
+    document.getElementById('annCat').value=t.category||'general';
+    if(t.req_file) document.getElementById('reqFileTgl').classList.add('on');
+  },100);
+};
+window.delTemplate=async id=>{
+  if(!confirm('ลบ Template นี้?'))return;
+  await sb.from('ann_templates').delete().eq('id',id);
+  templates=templates.filter(t=>t.id!==id); renderTemplateList(); toast('ลบ Template แล้ว','🗑');
+};
+document.getElementById('templateSaveForm')?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const {data,error}=await sb.from('ann_templates').insert({
+    name:document.getElementById('tmplName').value,
+    category:document.getElementById('tmplCat').value,
+    title_template:document.getElementById('tmplTitle').value,
+    content_template:document.getElementById('tmplContent').value,
+    req_file:document.getElementById('tmplReqFile').classList.contains('on'),
+    created_by:curUser?.name||'admin'
+  }).select().single();
+  if(!error&&data){templates.unshift({...data});renderTemplateList();e.target.reset();toast('บันทึก Template แล้วค่ะ');}
+});
+
+/* ========== LINE MESSAGING API ========== */
+// วิธีตั้งค่า:
+// 1. สร้าง LINE Official Account ฟรีที่ https://account.line.biz
+// 2. สร้าง Messaging API channel ใน LINE Developers Console
+// 3. เพิ่ม Bot เข้ากลุ่ม LINE ที่ต้องการแจ้งเตือน
+// 4. ได้ groupId จาก webhook event แรกที่ bot ได้รับในกลุ่ม
+// 5. ใส่ Channel Access Token + groupId ด้านล่าง
+// 6. เพิ่ม endpoint บน Apps Script (หรือ backend) เพื่อ proxy เพราะ CORS
+
+const LINE_CONFIG={
+  channelToken: localStorage.getItem('hub_line_token')||'',  // Channel Access Token
+  groupId:      localStorage.getItem('hub_line_group')||'',  // groupId หรือ roomId
+  enabled:      localStorage.getItem('hub_line_enabled')==='1',
+};
+
+async function sendLineMessage(message){
+  if(!LINE_CONFIG.enabled||!LINE_CONFIG.channelToken||!LINE_CONFIG.groupId){
+    console.log('LINE: ยังไม่ได้ตั้งค่า หรือปิดอยู่');
+    return false;
+  }
+  try{
+    // ส่งผ่าน GDRIVE_URL (Apps Script) เป็น proxy เพื่อ bypass CORS
+    const res=await fetch(GDRIVE_URL,{
+      method:'POST',
+      body:JSON.stringify({
+        action:'lineMessage',
+        channelToken: LINE_CONFIG.channelToken,
+        groupId:      LINE_CONFIG.groupId,
+        message:      message
+      })
+    });
+    const data=await res.json();
+    if(data.success) console.log('LINE: ส่งสำเร็จ');
+    else console.warn('LINE error:',data.error);
+    return !!data.success;
+  }catch(e){
+    console.warn('LINE exception:',e);
+    return false;
+  }
+}
+
+async function notifyNewAnn(ann){
+  const catLabel=CATS[ann.cat]?.label||ann.cat;
+  const emoji={urgent:'🚨',general:'📢',training:'📚',promo:'🎉',meeting:'📅',info:'ℹ️'}[ann.cat]||'📢';
+  const branchText=ann.branches.includes('ทุกสาขา')?'ทุกสาขา':ann.branches.join(', ');
+  const msg=`${emoji} ประกาศใหม่: ${ann.title}\n📁 ${catLabel} | 🏪 ${branchText}\n\n${ann.content.substring(0,150)}${ann.content.length>150?'...':''}\n\n— BranchFlow`;
+  await sendLineMessage(msg);
+}
+
+// UI settings สำหรับ LINE
+window.openLineSettings=()=>{
+  document.getElementById('lineTokenInp').value=LINE_CONFIG.channelToken;
+  document.getElementById('lineGroupInp').value=LINE_CONFIG.groupId;
+  const tgl=document.getElementById('lineEnabledTgl');
+  if(LINE_CONFIG.enabled) tgl.classList.add('on'); else tgl.classList.remove('on');
+  openM('lineSettingsM');
+};
+window.saveLineSettings=()=>{
+  LINE_CONFIG.channelToken=document.getElementById('lineTokenInp').value.trim();
+  LINE_CONFIG.groupId=document.getElementById('lineGroupInp').value.trim();
+  LINE_CONFIG.enabled=document.getElementById('lineEnabledTgl').classList.contains('on');
+  localStorage.setItem('hub_line_token',LINE_CONFIG.channelToken);
+  localStorage.setItem('hub_line_group',LINE_CONFIG.groupId);
+  localStorage.setItem('hub_line_enabled',LINE_CONFIG.enabled?'1':'0');
+  const dot=document.getElementById('lineStatusDot');
+  if(dot) dot.style.background=LINE_CONFIG.enabled&&LINE_CONFIG.channelToken?'#22c55e':'var(--t3)';
+  closeM('lineSettingsM');
+  toast(LINE_CONFIG.enabled?'✅ เปิดแจ้งเตือน LINE แล้วค่ะ':'LINE แจ้งเตือนปิดอยู่','💬');
+};
+window.testLineMessage=async()=>{
+  const btn=document.getElementById('lineTestBtn');
+  btn.innerHTML='⏳...';btn.disabled=true;
+  const ok=await sendLineMessage('🔔 ทดสอบการแจ้งเตือนจาก BranchFlow ✓');
+  btn.innerHTML='🔔 ทดสอบส่ง';btn.disabled=false;
+  toast(ok?'✅ ส่ง LINE สำเร็จ':'❌ ส่งไม่ได้ — เช็ค Token/GroupID',ok?'💬':'❌');
+};
+
+/* ========== PWA INSTALL ========== */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const btn=document.getElementById('installPWABtn');
+  if(btn) btn.classList.remove('hidden');
+});
+window.installPWA=async()=>{
+  if(!deferredPrompt){toast('เปิดในเบราว์เซอร์เพื่อติดตั้งค่ะ','📱');return;}
+  deferredPrompt.prompt();
+  const{outcome}=await deferredPrompt.userChoice;
+  if(outcome==='accepted') toast('ติดตั้งแอปสำเร็จ! 🎉');
+  deferredPrompt=null;
+  document.getElementById('installPWABtn')?.classList.add('hidden');
+};
+window.addEventListener('appinstalled',()=>toast('ติดตั้งแอปสำเร็จแล้วค่ะ 🎉'));
+
+/* ========== REFRESH UI ========== */
+function refreshAll(){
+  const isA=curRole==='admin';
+  const isE=curRole==='editor';
+  // admin-only elements
+  document.querySelectorAll('.admin-only').forEach(el=>{
+    if(isA){el.classList.remove('hidden');if(el.classList.contains('sb-bot'))el.style.display='flex';}
+    else el.classList.add('hidden');
+  });
+  // editor-only elements (ดูไฟล์แนบ)
+  document.querySelectorAll('.editor-only').forEach(el=>{
+    if(isA||isE) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  });
+  const pi=document.getElementById('profInfo');
+  const logB=`<button onclick="logout()" style="font-size:11px;color:var(--t3);background:none;border:none;cursor:pointer;padding:0;font-family:'Prompt',sans-serif;margin-top:2px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'">ออกจากระบบ</button>`;
+  const roleColor={admin:'var(--o600)',editor:'var(--pur,#8b5cf6)',user:'var(--t1)',viewer:'var(--t3)'};
+  const roleIcon={admin:'👑',editor:'✏️',user:'👤',viewer:'👁'};
+  if(curUser) pi.innerHTML=`<div style="font-size:13px;font-weight:700;color:${roleColor[curRole]}">${roleIcon[curRole]} ${curUser.name}</div><div style="font-size:11px;color:var(--t3)">${curUser.branch||curRole}</div>${logB}`;
+  else pi.innerHTML=`<div style="font-size:12px;color:var(--t3);margin-bottom:8px">สถานะ: ผู้เยี่ยมชม</div><button onclick="openM('loginM')" class="btn btn-o btn-pill btn-sm">เข้าสู่ระบบ</button>`;
+  const bd=document.getElementById('myBranchDisp');
+  if(bd) bd.textContent=curUser?.branch||(curRole==='viewer'?'ผู้เยี่ยมชม':'—');
+  updateMobileNav();
+  renderMenus();buildFilterBar();renderStats();renderCards();
+  // อัปเดต LINE status dot
+  const dot=document.getElementById('lineStatusDot');
+  if(dot) dot.style.background=LINE_CONFIG.enabled&&LINE_CONFIG.channelToken?'#22c55e':'var(--t3)';
+  // แสดงปุ่ม/โหลด revision สำหรับ branch user
+  const sbBtn=document.getElementById('myRevSbBtn');
+  if(sbBtn) sbBtn.style.display=curRole==='user'?'block':'none';
+  if(curRole==='user') loadMyRevisions();
+  else {const b=document.getElementById('revNotifBanner');if(b)b.style.display='none';}
+}
+
+/* ========== MENUS ========== */
+function renderMenus(){
+  const c=document.getElementById('menuCont');c.innerHTML='';
+  menus.forEach(m=>{
+    const isV=curRole==='viewer',href=isV?'#':m.url,oc=isV?'onclick="vaAlert(event)"':'';
+    c.insertAdjacentHTML('beforeend',`<div style="position:relative">
+      <a href="${href}" target="${!isV&&m.url!=='#'?'_blank':'_self'}" ${oc} class="mi ${m.url==='#'?'active':''}">
+        <span class="ico">${m.icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name}</span>
+      </a>
+      ${curRole==='admin'?`<button onclick="delMenu('${m.id}')" class="xb">✕</button>`:''}</div>`);
+  });
+}
+window.delMenu=async id=>{if(!confirm('ลบเมนู?'))return;await sb.from('menus').delete().eq('id',id);menus=menus.filter(m=>m.id!==id);renderMenus();toast('ลบเมนูแล้ว','🗑');};
+document.getElementById('menuForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const {data}=await sb.from('menus').insert({name:document.getElementById('mN').value,icon:document.getElementById('mI').value,url:document.getElementById('mL').value,sort_order:99}).select().single();
+  if(data){menus.push({id:data.id,name:data.name,icon:data.icon,url:data.url});renderMenus();e.target.reset();closeM('addMenuM');toast('เพิ่มเมนูแล้วค่ะ');}
+});
+
+/* ========== STATS ========== */
+function renderStats(){
+  const unread=anns.filter(a=>!readIds.includes(a.id)).length;
+  const urgent=anns.filter(a=>a.cat==='urgent'&&a.status!=='done').length;
+  const ongoing=anns.filter(a=>a.status==='ongoing').length;
+  const done=anns.filter(a=>a.status==='done').length;
+  document.getElementById('statRow').innerHTML=`
+    <div class="stat-box"><div class="sv" style="color:var(--blu)">${unread}</div><div class="sl">ยังไม่อ่าน</div></div>
+    <div class="stat-box"><div class="sv" style="color:var(--red)">${urgent}</div><div class="sl">งานด่วน</div></div>
+    <div class="stat-box"><div class="sv" style="color:var(--yel)">${ongoing}</div><div class="sl">ดำเนินการ</div></div>
+    <div class="stat-box"><div class="sv" style="color:var(--grn)">${done}</div><div class="sl">เสร็จแล้ว</div></div>`;
+}
+
+/* ========== FILTER BAR ========== */
+function getVisible(){
+  const q=(document.getElementById('searchQ')?.value||'').toLowerCase();
+  const mb=curUser?.branch||'';
+  return anns.filter(a=>{
+    if(curRole!=='admin'&&mb&&!a.branches.includes('ทุกสาขา')&&!a.branches.includes(mb))return false;
+    if(curCat!=='all'&&a.cat!==curCat)return false;
+    if(curStatus!=='all'&&a.status!==curStatus)return false;
+    if(q&&!(a.title||'').toLowerCase().includes(q)&&!(a.content||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+function buildFilterBar(){
+  const bar=document.getElementById('filterBar');bar.innerHTML='';
+  const stMap={all:{l:'ทุกสถานะ'},new:{l:'ใหม่'},ongoing:{l:'ดำเนินการ'},done:{l:'เสร็จแล้ว'}};
+  Object.entries(stMap).forEach(([k,v])=>{
+    const cnt=k==='all'?anns.length:anns.filter(a=>a.status===k).length;
+    bar.insertAdjacentHTML('beforeend',`<button class="ftab ${curStatus===k?'on':''}" onclick="curStatus='${k}';buildFilterBar();renderCards()">${v.l}<span class="cnt">${cnt}</span></button>`);
+  });
+  bar.insertAdjacentHTML('beforeend','<div style="width:1px;height:20px;background:var(--bd2);margin:0 2px"></div>');
+  Object.entries(CATS).forEach(([k,v])=>{
+    if(k==='all')return;
+    const cnt=anns.filter(a=>a.cat===k).length;if(!cnt)return;
+    bar.insertAdjacentHTML('beforeend',`<button class="ftab cat-${k} ${curCat===k?'on':''}" onclick="curCat='${k}';buildFilterBar();renderCards()">${v.icon} ${v.label}<span class="cnt">${cnt}</span></button>`);
+  });
+  if(curCat!=='all'||curStatus!=='all') bar.insertAdjacentHTML('beforeend',`<button class="ftab" onclick="curCat='all';curStatus='all';buildFilterBar();renderCards()" style="color:var(--red);border-color:rgba(239,68,68,.2)">✕ ล้าง</button>`);
+}
+
+/* ========== RENDER CARDS ========== */
+function renderCards(){
+  const grid=document.getElementById('annGrid');grid.innerHTML='';
+  let data=getVisible();
+  document.getElementById('showCount').textContent=data.length;
+  document.getElementById('branchLbl').textContent=curUser?.branch&&curRole!=='admin'?`• ${curUser.branch}`:'';
+  if(!data.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--t3)"><div style="font-size:36px;margin-bottom:10px">🔍</div><div style="font-weight:600">ไม่พบประกาศ</div></div>`;return;}
+
+  const pinned=data.filter(a=>a.pinned),rest=data.filter(a=>!a.pinned);
+  rest.sort((a,b)=>sortDesc?new Date(b.ts)-new Date(a.ts):new Date(a.ts)-new Date(b.ts));
+
+  // แบ่งตามเดือน
+  const monthGroups={};
+  rest.forEach(a=>{
+    let key='ไม่ระบุวันที่';
+    try{const d=new Date(a.ts);if(!isNaN(d))key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}catch{}
+    if(!monthGroups[key]) monthGroups[key]=[];
+    monthGroups[key].push(a);
+  });
+  const monthKeys=Object.keys(monthGroups).filter(k=>k!=='ไม่ระบุวันที่').sort((a,b)=>sortDesc?b.localeCompare(a):a.localeCompare(b));
+  if(monthGroups['ไม่ระบุวันที่']) monthKeys.push('ไม่ระบุวันที่');
+
+  const now=new Date();
+  let gi=0;
+
+  // pinned ก่อน ไม่แบ่งเดือน
+  if(pinned.length){
+    grid.insertAdjacentHTML('beforeend',`<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:4px 0 4px"><span style="font-size:11px;font-weight:700;color:var(--o500)">📌 ปักหมุด</span><div style="flex:1;height:1px;background:rgba(249,115,22,.2)"></div></div>`);
+    pinned.forEach(ann=>_renderOneCard(grid,ann,gi++,now));
+  }
+
+  // แสดงตามเดือน
+  monthKeys.forEach(mk=>{
+    let label=mk;
+    if(mk!=='ไม่ระบุวันที่'){try{label=new Date(mk+'-02').toLocaleDateString('th-TH',{year:'numeric',month:'long'});}catch{}}
+    grid.insertAdjacentHTML('beforeend',`<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:14px 0 6px"><span style="font-size:11px;font-weight:700;color:var(--t2);white-space:nowrap">📅 ${label}</span><div style="flex:1;height:1px;background:var(--bd2)"></div><span style="font-size:10px;color:var(--t3);white-space:nowrap">${monthGroups[mk].length} รายการ</span></div>`);
+    monthGroups[mk].forEach(ann=>_renderOneCard(grid,ann,gi++,now));
+  });
+}
+
+function _renderOneCard(grid,ann,i,now){
+    const cat=CATS[ann.cat]||CATS.general,isExp=ann.expiry&&new Date(ann.expiry)<now,isUnread=!readIds.includes(ann.id);
+    let ts='เพิ่งโพสต์';try{if(ann.ts){const d=new Date(ann.ts);if(!isNaN(d))ts=d.toLocaleDateString('th-TH');}}catch{}
+    const stBadge={new:`<span class="sbadge new">🔵 ใหม่</span>`,ongoing:`<span class="sbadge ongoing">🟡 ดำเนินการ</span>`,done:`<span class="sbadge done">🟢 เสร็จ</span>`}[ann.status]||'';
+    const catBadge=`<span class="cbadge cat-${ann.cat}">${cat.icon} ${cat.label}</span>`;
+    const expBadge=isExp?`<span class="sbadge expired">⏰ หมดอายุ</span>`:'';
+    const revBadge=ann.pendingRevisions>0?`<span class="sbadge" style="background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.25)">🔄 รอแก้ ${ann.pendingRevisions}</span>`:'';
+    const autoCompBadge=ann.autoComplete&&ann.status!=='done'?`<span class="sbadge" style="background:rgba(34,197,94,.1);color:#16a34a;border-color:rgba(34,197,94,.2)">⚡</span>`:'';
+    const linkHtml=ann.link?canOpenLink()
+      ?`<a href="${ann.link}" target="_blank" class="lbtn cat-${ann.cat}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>${ann.linkName}</span>
+          <svg style="margin-left:auto;opacity:.6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>`
+      :`<div style="opacity:.35;cursor:not-allowed;display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:8px;font-size:11px;border:1px dashed var(--bd2);color:var(--t3)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:13px;height:13px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>${ann.linkName}</span></div>`:'';
+    // file reply button — user=ส่งไฟล์ / editor+admin=ดูไฟล์
+    const reqHtml=ann.reqFile
+      ?canUpload()
+        ?`<button onclick="event.stopPropagation();openViewAnn('${ann.id}')" class="lbtn cat-${ann.cat}" style="justify-content:center;width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:13px;height:13px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>📤 แนบไฟล์ตอบกลับ</span></button>`
+        :canViewFiles()
+          ?`<button onclick="event.stopPropagation();openViewAnn('${ann.id}')" class="lbtn cat-${ann.cat}" style="justify-content:center;width:100%;background:rgba(139,92,246,.08);color:#8b5cf6;border-color:rgba(139,92,246,.25)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:13px;height:13px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><line x1="12" y1="3" x2="12" y2="15"/><polyline points="7 8 12 3 17 8"/></svg>
+              <span>📂 ดูไฟล์ที่ส่งมา</span></button>`
+          :''
+      :'';
+    const adminActs=canEdit()?`<div class="card-acts" onclick="event.stopPropagation()">
+      <button class="ca pin" onclick="togglePin('${ann.id}',${ann.pinned})">${ann.pinned?'📌 ถอด':'📌 หมุด'}</button>
+      <button class="ca edit" onclick="openEditAnn('${ann.id}')">✏️ แก้ไข</button>
+      <button class="ca del" onclick="delAnn('${ann.id}')">🗑 ลบ</button>
+      <button class="ca" style="background:rgba(59,130,246,.1);color:#3b82f6" onclick="openReadReceipts('${ann.id}')">👁 อ่านแล้ว</button>
+    </div>`:'';
+    // comment button (ทุก role ที่ login แล้ว)
+    const commentBtn=curUser?`<button onclick="event.stopPropagation();openComments('${ann.id}')" class="lbtn" style="justify-content:center;background:rgba(59,130,246,.08);color:#3b82f6;border-color:rgba(59,130,246,.2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:13px;height:13px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>💬 ความคิดเห็น</span></button>`:'';
+    const footContent=linkHtml+reqHtml+commentBtn+adminActs;
+    const cardClick=`openAnnDetail('${ann.id}')`;
+
+    // === GRID VIEW — แสดงแค่หัวข้อ ไม่มีรายละเอียด ===
+    if(curView==='gv'){
+      grid.insertAdjacentHTML('beforeend',`
+        <div class="ann-card cat-${ann.cat} ${ann.pinned?'pinned':''} ${isExp?'expired':''}" style="animation-delay:${i*.04}s;cursor:pointer;height:auto;min-height:unset" onclick="${cardClick}">
+          ${ann.pinned?`<div class="pin-badge">📌</div>`:''}
+          ${isUnread?`<div style="position:absolute;top:9px;left:8px;z-index:4"><div class="unread-dot"></div></div>`:''}
+          <div class="cat-bar"></div>
+          <div class="body" style="padding:11px 13px 12px;gap:5px">
+            <div class="ann-meta">${catBadge}${stBadge}${expBadge}${revBadge}${autoCompBadge}</div>
+            <div class="ann-dt" style="margin-top:1px"><div class="dot"></div>${ts}</div>
+            <h3 class="ann-ti" style="-webkit-line-clamp:2;margin-top:2px">${ann.title}</h3>
+            ${canEdit()?`
+            <div style="display:flex;gap:4px;margin-top:6px;padding-top:6px;border-top:1px solid var(--cb,rgba(249,115,22,.12))" onclick="event.stopPropagation()">
+              <button class="ca" style="background:rgba(59,130,246,.1);color:#3b82f6;flex:1;font-size:10px" onclick="openReadReceipts('${ann.id}')">👁</button>
+              ${ann.pendingRevisions>0?`<button class="ca" style="background:rgba(239,68,68,.1);color:var(--red);flex:1;font-size:10px" onclick="openWorkReport()">🔄</button>`:''}
+              <button class="ca" style="background:${ann.status==='done'?'rgba(245,158,11,.1)':'rgba(34,197,94,.1)'};color:${ann.status==='done'?'#d97706':'#16a34a'};flex:1;font-size:10px" onclick="toggleAnnDone('${ann.id}','${ann.status}')">${ann.status==='done'?'↩':'✅'}</button>
+              <button class="ca edit" style="font-size:10px" onclick="openEditAnn('${ann.id}')">✏️</button>
+              <button class="ca del" style="font-size:10px" onclick="delAnn('${ann.id}')">🗑</button>
+            </div>`:`
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;display:flex;align-items:center;gap:4px">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              กดเพื่อดูรายละเอียด
+            </div>`}
+          </div>
+        </div>`);
+
+    // === LIST VIEW ===
+    } else {
+      grid.insertAdjacentHTML('beforeend',`
+        <div class="ann-card cat-${ann.cat} ${ann.pinned?'pinned':''} ${isExp?'expired':''}" style="animation-delay:${i*.03}s;cursor:pointer" onclick="${cardClick}">
+          <div class="cat-bar"></div>
+          <div class="body" style="padding:11px 14px 11px 18px">
+            <div class="bl">
+              <div class="ann-meta" style="margin-bottom:4px">${catBadge}${stBadge}${expBadge}${revBadge}${autoCompBadge}${isUnread?`<div class="unread-dot"></div>`:''}</div>
+              <h3 class="ann-ti">${ann.title}</h3>
+              <div style="font-size:10px;color:var(--t3);margin-top:3px">🕒 ${ts} · กดเพื่อดูรายละเอียด</div>
+            </div>
+            <div class="br" onclick="event.stopPropagation()" style="flex-direction:column;align-items:flex-end;gap:5px">
+              ${ann.pinned?`<span style="font-size:10px;font-weight:700;color:var(--o500)">📌</span>`:''}
+              ${canEdit()?`<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+                <button class="ca" style="background:rgba(59,130,246,.1);color:#3b82f6;font-size:11px" onclick="openReadReceipts('${ann.id}')">👁 อ่านแล้ว</button>
+                ${ann.pendingRevisions>0?`<button class="ca" style="background:rgba(239,68,68,.1);color:var(--red);font-size:11px" onclick="openWorkReport()">🔄 แก้ ${ann.pendingRevisions}</button>`:''}
+                <button class="ca" style="background:${ann.status==='done'?'rgba(245,158,11,.1)':'rgba(34,197,94,.1)'};color:${ann.status==='done'?'#d97706':'#16a34a'};font-size:11px" onclick="toggleAnnDone('${ann.id}','${ann.status}')">${ann.status==='done'?'↩ ยังไม่เสร็จ':'✅ มาร์คเสร็จ'}</button>
+                <button class="ca edit" onclick="openEditAnn('${ann.id}')">✏️</button>
+                <button class="ca del" onclick="delAnn('${ann.id}')">🗑</button>
+              </div>`:''}
+            </div>
+          </div>
+        </div>`);
+    }
+}
+
+/* ========== ANN DETAIL POPUP ========== */
+window.openAnnDetail=async id=>{
+  const ann=anns.find(a=>a.id===id); if(!ann) return;
+
+  // รีโหลด curUser จาก localStorage ทุกครั้ง (กันกรณี session หมด)
+  if(!curUser){
+    try{curUser=JSON.parse(localStorage.getItem('hub_cur'));if(curUser)curRole=curUser.role;}catch{}
+  }
+
+  // บันทึกอ่านแล้ว
+  await markRead(id);
+  console.log('markRead called for',id,'curUser=',curUser?.name||'null');
+
+  const now=new Date();
+  const isExp=ann.expiry&&new Date(ann.expiry)<now;
+  const cat=CATS[ann.cat]||CATS.general;
+  let ts='';
+  try{if(ann.ts){const d=new Date(ann.ts);if(!isNaN(d))ts=d.toLocaleString('th-TH',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});}}catch{}
+
+  const stMap={
+    new:`<span class="sbadge new">🔵 ใหม่</span>`,
+    ongoing:`<span class="sbadge ongoing">🟡 กำลังดำเนินการ</span>`,
+    done:`<span class="sbadge done">🟢 เสร็จแล้ว</span>`
+  };
+
+  // ปุ่มตามสิทธิ์
+  const linkBtn=ann.link&&canOpenLink()?`
+    <a href="${ann.link}" target="_blank" class="btn btn-o" style="border-radius:12px;flex:1;text-decoration:none" onclick="event.stopPropagation()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      ${ann.linkName||'เปิดเอกสาร'}
+    </a>`:'';
+
+  const fileBtn=ann.reqFile&&canUpload()?`
+    <button onclick="event.stopPropagation();closeM('annDetailM');openViewAnn('${id}')" class="btn" style="border-radius:12px;flex:1;background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(234,88,12,.08));color:var(--o600);border:1.5px solid rgba(249,115,22,.25)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      📤 แนบไฟล์ตอบกลับ
+    </button>`:
+  ann.reqFile&&canViewFiles()?`
+    <button onclick="event.stopPropagation();closeM('annDetailM');openViewAnn('${id}')" class="btn" style="border-radius:12px;flex:1;background:rgba(139,92,246,.1);color:#8b5cf6;border:1.5px solid rgba(139,92,246,.25)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><line x1="12" y1="3" x2="12" y2="15"/><polyline points="7 8 12 3 17 8"/></svg>
+      📂 ดูไฟล์ที่ส่งมา
+    </button>`:'';
+
+  const commentBtn=curUser?`
+    <button onclick="event.stopPropagation();closeM('annDetailM');openComments('${id}')" class="btn btn-gh" style="border-radius:12px;flex:1">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      💬 ความคิดเห็น
+    </button>`:'';
+
+  const adminBtns=canEdit()?`
+    <div style="display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--bd2);flex-wrap:wrap">
+      <button onclick="event.stopPropagation();closeM('annDetailM');openEditAnn('${id}')" class="btn btn-gh btn-sm" style="border-radius:8px;flex:1">✏️ แก้ไข</button>
+      <button onclick="event.stopPropagation();closeM('annDetailM');openReadReceipts('${id}')" class="btn btn-sm" style="border-radius:8px;flex:1;background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.2)">👁 สถิติอ่าน</button>
+      <button onclick="event.stopPropagation();openRevisionRequest('${id}')" class="btn btn-sm" style="border-radius:8px;flex:1;background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)">🔄 ขอแก้ไข</button>
+      <button onclick="event.stopPropagation();toggleAnnDone('${id}','${ann.status}')" class="btn btn-sm" style="border-radius:8px;flex:1;background:${ann.status==='done'?'rgba(245,158,11,.1)':'rgba(34,197,94,.1)'};color:${ann.status==='done'?'#d97706':'#16a34a'};border:1px solid ${ann.status==='done'?'rgba(245,158,11,.2)':'rgba(34,197,94,.2)'}">${ann.status==='done'?'🔄 ยังไม่เสร็จ':'✅ มาร์คเสร็จ'}</button>
+      <button onclick="event.stopPropagation();togglePin('${id}',${ann.pinned})" class="btn btn-sm" style="border-radius:8px;background:rgba(249,115,22,.1);color:var(--o600);border:1px solid rgba(249,115,22,.2)">${ann.pinned?'📌 ถอด':'📌 หมุด'}</button>
+      <button onclick="event.stopPropagation();closeM('annDetailM');delAnn('${id}')" class="btn btn-sm btn-rd" style="border-radius:8px">🗑</button>
+    </div>`:'';
+  const autoCompBadge=ann.autoComplete?`<span style="background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.25);border-radius:50px;padding:2px 10px;font-size:10px;font-weight:700">⚡ Auto-complete</span>`:'';
+  const revBadge=(ann.pendingRevisions>0)?`<span style="background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);border-radius:50px;padding:2px 10px;font-size:10px;font-weight:700">🔄 รอแก้ ${ann.pendingRevisions} สาขา</span>`:'';
+
+  // สาขาเป้าหมาย
+  const branchChips=ann.branches.map(b=>`<span class="bchip">${b}</span>`).join('');
+
+  document.getElementById('annDetailBody').innerHTML=`
+    <!-- Header -->
+    <div class="cat-bar cat-${ann.cat}" style="height:5px;margin:-26px -26px 20px;border-radius:20px 20px 0 0"></div>
+
+    <!-- Badges row -->
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="cbadge cat-${ann.cat}">${cat.icon} ${cat.label}</span>
+      ${stMap[ann.status]||''}
+      ${isExp?`<span class="sbadge expired">⏰ หมดอายุแล้ว</span>`:''}
+      ${autoCompBadge}${revBadge}
+      ${ann.pinned?`<span style="background:linear-gradient(135deg,rgba(249,115,22,.15),rgba(234,88,12,.1));color:var(--o600);border:1px solid rgba(249,115,22,.25);border-radius:50px;padding:2px 10px;font-size:10px;font-weight:700">📌 ปักหมุด</span>`:''}
+    </div>
+
+    <!-- Title -->
+    <h2 style="font-size:20px;font-weight:800;color:var(--t1);line-height:1.35;margin-bottom:8px">${ann.title}</h2>
+
+    <!-- Meta -->
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--t3);margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--bd2)">
+      <span>🕒 ${ts}</span>
+      ${ann.createdBy?`<span>✍️ ${ann.createdBy}</span>`:''}
+      ${ann.expiry?`<span style="color:${isExp?'var(--red)':'var(--o500)'}">⏰ ${isExp?'หมดอายุ':'ถึง'}: ${new Date(ann.expiry).toLocaleDateString('th-TH')}</span>`:''}
+    </div>
+
+    <!-- Content -->
+    <div style="font-size:14px;color:var(--t1);line-height:1.9;white-space:pre-wrap;margin-bottom:18px">${ann.content}</div>
+
+    <!-- Branches -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">📍 ส่งถึงสาขา</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">${branchChips}</div>
+    </div>
+
+    <!-- Action buttons -->
+    ${linkBtn||fileBtn||commentBtn?`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${linkBtn}${fileBtn}${commentBtn}
+    </div>`:''}
+
+    <!-- Admin buttons -->
+    ${adminBtns}
+
+    <!-- Read confirmation badge -->
+    ${curUser?`
+    <div style="margin-top:14px;display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:12px;font-size:12px;color:#16a34a;font-weight:600">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      บันทึกแล้วว่าคุณอ่านประกาศนี้แล้ว
+    </div>`:`
+    <div style="margin-top:14px;padding:10px 14px;background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);border-radius:12px;font-size:12px;color:var(--o600)">
+      💡 กรุณา <strong>เข้าสู่ระบบ</strong> เพื่อบันทึกสถานะการอ่านค่ะ
+    </div>`}`;
+
+  openM('annDetailM');
+};
+function buildBrCkList(){
+  const c=document.getElementById('brCkList');c.innerHTML='';
+  c.insertAdjacentHTML('beforeend',`<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(234,88,12,.07));border:1px solid rgba(249,115,22,.3);padding:4px 12px;border-radius:50px;font-weight:700;color:var(--o600)"><input type="checkbox" name="brCk" value="ทุกสาขา" style="accent-color:var(--o500)"> 🏬 ทุกสาขา</label>`);
+  branches.forEach(b=>{c.insertAdjacentHTML('beforeend',`<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;background:var(--o50);border:1px solid rgba(249,115,22,.18);padding:4px 10px;border-radius:50px"><input type="checkbox" name="brCk" value="${b}" style="accent-color:var(--o500)"> ${b}</label>`);});
+}
+window.selBr=sel=>document.querySelectorAll('[name="brCk"]').forEach(c=>c.checked=sel);
+
+window.openAddAnn=()=>{
+  document.getElementById('annEId').value='';
+  document.getElementById('annMTi').textContent='สร้างประกาศใหม่';
+  document.getElementById('annSubBtn').textContent='โพสต์ประกาศ';
+  document.getElementById('annForm').reset();
+  document.getElementById('pinTgl').classList.remove('on');
+  document.getElementById('reqFileTgl').classList.remove('on');
+  buildBrCkList();openM('annM');
+};
+window.openEditAnn=id=>{
+  const ann=anns.find(a=>a.id===id);if(!ann)return;
+  document.getElementById('annEId').value=id;
+  document.getElementById('annMTi').textContent='แก้ไขประกาศ';
+  document.getElementById('annSubBtn').textContent='บันทึกการแก้ไข';
+  document.getElementById('annTi').value=ann.title||'';
+  document.getElementById('annCo').value=ann.content||'';
+  document.getElementById('annCat').value=ann.cat||'general';
+  document.getElementById('annStatus').value=ann.status||'new';
+  document.getElementById('annLi').value=ann.link||'';
+  document.getElementById('annLn').value=ann.linkName||'';
+  document.getElementById('annExp').value=ann.expiry||'';
+  ann.pinned?document.getElementById('pinTgl').classList.add('on'):document.getElementById('pinTgl').classList.remove('on');
+  ann.reqFile?document.getElementById('reqFileTgl').classList.add('on'):document.getElementById('reqFileTgl').classList.remove('on');
+  // auto_complete
+  if(ann.autoComplete){
+    document.getElementById('autoCompTgl').classList.add('on');
+    document.getElementById('reqBranchWrap').style.display='block';
+    buildReqBrCkList();
+    setTimeout(()=>{
+      document.querySelectorAll('[name="reqBrCk"]').forEach(c=>{
+        if((ann.requiredBranches||[]).includes(c.value)) c.checked=true;
+      });
+    },100);
+  } else {
+    document.getElementById('autoCompTgl').classList.remove('on');
+    document.getElementById('reqBranchWrap').style.display='none';
+  }
+  buildBrCkList();
+  document.querySelectorAll('[name="brCk"]').forEach(c=>{if(ann.branches.includes(c.value))c.checked=true;});
+  openM('annM');
+};
+
+window.togglePin=async(id,cur)=>{
+  await sb.from('announcements').update({pinned:!cur}).eq('id',id);
+  const idx=anns.findIndex(a=>a.id===id);if(idx>=0)anns[idx].pinned=!cur;
+  renderCards();toast(cur?'ถอดหมุดแล้ว':'ปักหมุดแล้ว','📌');
+};
+window.delAnn=async id=>{
+  if(!confirm('ลบประกาศนี้หรือไม่?'))return;
+  await sb.from('announcements').delete().eq('id',id);
+  anns=anns.filter(a=>a.id!==id);renderCards();buildFilterBar();renderStats();toast('ลบประกาศแล้ว','🗑');
+};
+
+document.getElementById('annForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=document.getElementById('annSubBtn');btn.innerHTML='⏳...';btn.disabled=true;
+  const eid=document.getElementById('annEId').value;
+  const checked=Array.from(document.querySelectorAll('[name="brCk"]:checked')).map(c=>c.value);
+  const payload={
+    title:document.getElementById('annTi').value,
+    content:document.getElementById('annCo').value,
+    category:document.getElementById('annCat').value,
+    status:document.getElementById('annStatus').value,
+    link:document.getElementById('annLi').value,
+    link_name:document.getElementById('annLn').value||'เปิดเอกสาร',
+    expiry:document.getElementById('annExp').value||null,
+    pinned:document.getElementById('pinTgl').classList.contains('on'),
+    req_file:document.getElementById('reqFileTgl').classList.contains('on'),
+    auto_complete:document.getElementById('autoCompTgl').classList.contains('on'),
+    required_branches:Array.from(document.querySelectorAll('[name="reqBrCk"]:checked')).map(c=>c.value),
+    branches:checked.length?checked:['ทุกสาขา'],
+    created_by:curUser?.name||'admin',
+  };
+  if(eid){
+    const ann=anns.find(a=>a.id===eid);
+    const hist=[...(ann?.history||[]),{by:curUser?.name||'admin',at:new Date().toISOString(),action:'แก้ไขประกาศ'}];
+    const {error}=await sb.from('announcements').update({...payload,history:hist}).eq('id',eid);
+    if(!error){
+      const idx=anns.findIndex(a=>a.id===eid);
+      if(idx>=0) Object.assign(anns[idx],{
+        ...payload,cat:payload.category,linkName:payload.link_name,
+        reqFile:payload.req_file,autoComplete:payload.auto_complete,
+        requiredBranches:payload.required_branches,history:hist
+      });
+      toast('แก้ไขประกาศแล้วค่ะ','✅');
+    } else toast('เกิดข้อผิดพลาด','❌');
+  } else {
+    const hist=[{by:curUser?.name||'admin',at:new Date().toISOString(),action:'สร้างประกาศ'}];
+    const {data,error}=await sb.from('announcements').insert({...payload,history:hist}).select().single();
+    if(!error&&data){
+      anns.unshift({
+        id:data.id,...payload,cat:payload.category,linkName:payload.link_name,
+        reqFile:payload.req_file,autoComplete:payload.auto_complete,
+        requiredBranches:payload.required_branches||[],
+        ts:data.created_at,history:hist,pendingRevisions:0
+      });
+      toast('โพสต์ประกาศแล้วค่ะ','✅');
+      notifyNewAnn({...payload,cat:payload.category});
+    } else toast('เกิดข้อผิดพลาด','❌');
+  }
+  btn.innerHTML=eid?'บันทึกการแก้ไข':'โพสต์ประกาศ';btn.disabled=false;
+  closeM('annM');renderCards();buildFilterBar();renderStats();
+});
+
+/* ========== FILE REPLY ========== */
+window.openViewAnn=async id=>{
+  const ann=anns.find(a=>a.id===id);if(!ann)return;
+  markRead(id);
+  const {data:replies,error:rErr}=await sb.from('file_replies').select('*').eq('announcement_id',id).order('created_at',{ascending:false});
+  if(rErr) console.warn('file_replies fetch error',rErr);
+  const replyList=replies||[];
+  const canUpload=curRole==='admin'||curRole==='user';
+
+  const rHtml=replyList.length?replyList.map(r=>{
+    const ext=r.file_name.match(/\.(pdf)$/i)?'📄':r.file_name.match(/\.(xls|xlsx|csv)$/i)?'📊':r.file_name.match(/\.(jpg|jpeg|png|gif|webp)$/i)?'🖼':'📎';
+    return `<div class="file-chip" style="margin-bottom:4px">
+      ${r.file_url?`<a href="${r.file_url}" target="_blank" style="font-size:18px;text-decoration:none;flex-shrink:0">${ext}</a>`:`<span style="font-size:18px;flex-shrink:0">${ext}</span>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${r.file_name}</div>
+        <div style="font-size:10px;color:var(--t3)">${r.submitted_by} · ${r.branch_name||'—'} · ${new Date(r.created_at).toLocaleDateString('th-TH')}</div>
+      </div>
+      ${r.file_url?`<a href="${r.file_url}" target="_blank" class="btn btn-sm btn-gh" style="border-radius:8px;font-size:11px">⬇ ดาวน์โหลด</a>`:''}
+    </div>`;
+  }).join(''):`<div style="text-align:center;padding:20px;color:var(--t3)">
+    <div style="font-size:28px;margin-bottom:6px">📭</div>
+    <div style="font-size:12px">ยังไม่มีไฟล์ตอบกลับ</div>
+  </div>`;
+
+  document.getElementById('viewAnnCont').innerHTML=`
+    <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--bd2)">
+      <div class="ann-meta" style="margin-bottom:8px">
+        <span class="cbadge cat-${ann.cat}">${CATS[ann.cat]?.icon} ${CATS[ann.cat]?.label}</span>
+        ${{new:`<span class="sbadge new">🔵 ใหม่</span>`,ongoing:`<span class="sbadge ongoing">🟡 ดำเนินการ</span>`,done:`<span class="sbadge done">🟢 เสร็จ</span>`}[ann.status]||''}
+      </div>
+      <h3 style="font-size:17px;font-weight:800;margin-bottom:8px;color:var(--t1)">${ann.title}</h3>
+      <p style="font-size:13px;color:var(--t2);line-height:1.8;white-space:pre-wrap">${ann.content}</p>
+      ${ann.link?`<a href="${ann.link}" target="_blank" class="lbtn cat-${ann.cat}" style="margin-top:12px;display:inline-flex">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>${ann.linkName||'เปิดเอกสาร'}</span></a>`:''}
+    </div>
+
+    ${canUpload?`
+    <div class="fsec" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--o600);margin-bottom:10px">📤 แนบไฟล์ตอบกลับ <span style="font-weight:400;color:var(--t3)">(รูป / PDF / Excel)</span></div>
+      <div class="upload-zone" id="dz_${id}" onclick="document.getElementById('fi_${id}').click()">
+        <input type="file" id="fi_${id}" multiple accept="image/*,.pdf,.xlsx,.xls,.csv" onchange="handleFiles('${id}',this.files)" style="display:none">
+        <div style="font-size:28px;margin-bottom:6px">📁</div>
+        <div style="font-size:13px;font-weight:600;color:var(--o500)">คลิกหรือลากไฟล์มาวางที่นี่</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px">JPG, PNG, PDF, Excel ขนาดสูงสุด 5MB/ไฟล์</div>
+      </div>
+      <div id="fl_${id}" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
+      <button onclick="submitFiles('${id}')" id="submitFilesBtn_${id}" class="btn btn-o btn-fw" style="border-radius:10px;margin-top:10px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        📤 ส่งไฟล์ → Google Drive
+      </button>
+    </div>`:`<div style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--o600)">
+      👁 คุณมีสิทธิ์ดูไฟล์เท่านั้น ไม่สามารถอัปโหลดได้
+    </div>`}
+
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        📎 ไฟล์ที่ส่งมาแล้ว
+        <span style="background:var(--o100);color:var(--o600);border-radius:50px;padding:1px 8px;font-size:11px">${replyList.length} ไฟล์</span>
+      </div>
+      ${rHtml}
+    </div>
+
+    ${ann.history?.length?`
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--bd2)">
+      <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px">📝 ประวัติการแก้ไข</div>
+      ${ann.history.map(h=>`<div class="hist-item"><div class="hist-dot"></div>
+        <div><strong>${h.by}</strong> — ${h.action}
+        <div style="font-size:10px;color:var(--t3);margin-top:1px">${new Date(h.at).toLocaleString('th-TH')}</div></div>
+      </div>`).join('')}
+    </div>`:''}`;
+
+  openM('viewAnnM');
+  const dz=document.getElementById('dz_'+id);
+  if(dz){
+    dz.addEventListener('dragover',ev=>{ev.preventDefault();dz.classList.add('drag')});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+    dz.addEventListener('drop',ev=>{ev.preventDefault();dz.classList.remove('drag');handleFiles(id,ev.dataTransfer.files);});
+  }
+};
+window.handleFiles=(id,files)=>{
+  if(!pendingFiles[id])pendingFiles[id]=[];
+  Array.from(files).forEach(f=>pendingFiles[id].push(f));
+  const fl=document.getElementById('fl_'+id);if(!fl)return;
+  fl.innerHTML='';
+  (pendingFiles[id]||[]).forEach((f,i)=>{fl.insertAdjacentHTML('beforeend',`<div class="file-chip">
+    <span>${f.name.endsWith('.pdf')?'📄':f.name.match(/xls/)?'📊':'🖼'}</span>
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span>
+    <span style="color:var(--t3);font-size:10px;flex-shrink:0">${(f.size/1024).toFixed(1)}KB</span>
+    <button onclick="rmFile('${id}',${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;padding:0;margin-left:4px">✕</button></div>`);});
+};
+window.rmFile=(id,i)=>{if(pendingFiles[id])pendingFiles[id]=pendingFiles[id].filter((_,idx)=>idx!==i);handleFiles(id,[]);};
+
+/* ========== UPLOAD TO GOOGLE DRIVE ========== */
+const GDRIVE_URL='https://script.google.com/macros/s/AKfycbxb93DYXs4dvMSFFRM44PEOEzZ47f1WdhvHnjyAtvmHNs0ysr6qUM2P1hkyGKlU38zu/exec';
+
+async function uploadToGDrive(file, annTitle, branchName, annTs){
+  return new Promise((resolve)=>{
+    const reader=new FileReader();
+    reader.onload=async(e)=>{
+      try{
+        const base64=e.target.result.split(',')[1];
+
+        // วันที่ประกาศ เช่น 2025-05-28
+        let annDate='';
+        try{
+          if(annTs){
+            const d=new Date(annTs);
+            annDate=d.toLocaleDateString('sv-SE'); // yyyy-mm-dd
+          }
+        }catch{}
+
+        // วันที่+เวลาที่ส่ง เช่น 2025-05-28_09-15
+        const now=new Date();
+        const pad=n=>String(n).padStart(2,'0');
+        const uploadDate=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+
+        const payload={
+          file:       base64,
+          fileName:   file.name,
+          mimeType:   file.type||'application/octet-stream',
+          annTitle:   annTitle,
+          branchName: branchName,
+          annDate:    annDate,
+          uploadDate: uploadDate,
+        };
+        const res=await fetch(GDRIVE_URL,{method:'POST',body:JSON.stringify(payload)});
+        const data=await res.json();
+        resolve(data.success?data:{success:false,error:'Upload failed'});
+      }catch(err){
+        resolve({success:false,error:err.toString()});
+      }
+    };
+    reader.onerror=()=>resolve({success:false,error:'FileReader error'});
+    reader.readAsDataURL(file);
+  });
+}
+
+window.submitFiles=async id=>{
+  const fs=pendingFiles[id]||[];
+  if(!fs.length){toast('กรุณาเลือกไฟล์ก่อน','⚠️');return;}
+
+  const ann=anns.find(a=>a.id===id);
+  const annTitle=ann?.title||'ไม่ระบุประกาศ';
+  const branchName=curUser?.branch||'ไม่ระบุสาขา';
+
+  // update button
+  const btn=document.getElementById('submitFilesBtn_'+id);
+  if(btn){btn.innerHTML='⏳ กำลังอัปโหลด 0/'+fs.length+'...';btn.disabled=true;}
+  setDriveStatus('uploading');
+
+  let successCount=0, failCount=0;
+
+  for(let i=0;i<fs.length;i++){
+    const f=fs[i];
+    if(btn) btn.innerHTML=`⏳ กำลังอัปโหลด ${i+1}/${fs.length}... (${f.name.substring(0,20)})`;
+
+    // base64 เพิ่มขนาด ~33% + Apps Script URL Fetch limit 10MB → file จริงสูงสุด 5MB
+    if(f.size>5*1024*1024){
+      toast(`⚠️ ${f.name} ขนาดเกิน 5MB — ข้ามไฟล์นี้`,'⚠️');
+      failCount++;
+      continue;
+    }
+
+    const result=await uploadToGDrive(f, annTitle, branchName, ann?.ts);
+
+    if(result.success){
+      // บันทึก metadata + Drive URL ลง Supabase
+      const {error}=await sb.from('file_replies').insert({
+        announcement_id: id,
+        file_name:   f.name,
+        file_url:    result.directUrl||result.viewUrl||'',
+        file_size:   f.size,
+        submitted_by: curUser?.name||'ไม่ทราบ',
+        branch_name:  branchName,
+      });
+      if(!error) successCount++;
+      else{ toast(`❌ บันทึก ${f.name} ไม่สำเร็จ`,'❌'); failCount++; }
+    } else {
+      toast(`❌ อัปโหลด ${f.name} ไม่สำเร็จ: ${result.error||''}`, '❌');
+      failCount++;
+    }
+  }
+
+  pendingFiles[id]=[];
+  if(btn){btn.innerHTML='📤 ส่งไฟล์';btn.disabled=false;}
+  setDriveStatus(failCount===0?'ok':'error');
+
+  if(successCount>0){
+    toast(`✅ อัปโหลดสำเร็จ ${successCount} ไฟล์ → Google Drive`);
+    // เช็ค auto-complete หลังส่งไฟล์สำเร็จ
+    await checkAutoComplete(id);
+    // ปิด revision request ของสาขานี้ (ถ้ามี)
+    await resolveMyRevision(id);
+  }
+  if(failCount>0) toast(`⚠️ ล้มเหลว ${failCount} ไฟล์`,'⚠️');
+  openViewAnn(id);
+};
+
+/* ========== BRANCHES ========== */
+window.openBranchMgmt=()=>{renderBrList();openM('branchMgmtM');};
+async function renderBrList(){
+  const c=document.getElementById('brList');c.innerHTML='';
+  const {data}=await sb.from('branches').select('*').order('name');
+  (data||[]).forEach(b=>{c.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--bd2);background:var(--sf2)">
+    <span>🏪</span><span style="flex:1;font-size:13px;font-weight:600">${b.name}</span>
+    <button onclick="delBranch('${b.id}','${b.name}')" class="btn btn-sm btn-rd" style="border-radius:8px">ลบ</button>
+  </div>`);});
+}
+window.addBranch=async()=>{
+  const v=document.getElementById('newBrInp').value.trim();if(!v)return;
+  const {error}=await sb.from('branches').insert({name:v});
+  if(!error){branches.push(v);document.getElementById('newBrInp').value='';renderBrList();toast(`เพิ่มสาขา "${v}" แล้วค่ะ`);}
+  else toast('ชื่อสาขานี้มีอยู่แล้ว','⚠️');
+};
+window.delBranch=async(id,name)=>{
+  if(!confirm(`ลบสาขา "${name}"?`))return;
+  await sb.from('branches').delete().eq('id',id);
+  branches=branches.filter(b=>b!==name);renderBrList();toast(`ลบสาขา "${name}" แล้วค่ะ`,'🗑');
+};
+
+/* ========== USERS ========== */
+window.updateRolePreview=()=>{document.getElementById('rolePreview').innerHTML=(ROLE_PERMS[document.getElementById('euR').value]||[]).join('<br>');};
+function popBrSel(){const sel=document.getElementById('euBr');sel.innerHTML='';branches.forEach(b=>sel.insertAdjacentHTML('beforeend',`<option value="${b}">${b}</option>`));}
+function renderUserTable(){
+  const tb=document.getElementById('utbody');tb.innerHTML='';
+  users.forEach(u=>{
+    const isSelf=curUser?.id===u.id;
+    const rb=u.role==='admin'?`<span class="rb admin">👑 Admin</span>`:u.role==='editor'?`<span class="rb editor">✏️ Editor</span>`:u.role==='user'?`<span class="rb user">👤 User</span>`:`<span class="rb viewer">👁 Viewer</span>`;
+    tb.insertAdjacentHTML('beforeend',`<div class="urow">
+      <div class="uav ${u.role}">${(u.name||'?')[0].toUpperCase()}</div>
+      <div><div style="font-weight:600;font-size:13px">${u.name} ${isSelf?'<span style="font-size:10px;color:var(--o500)">(คุณ)</span>':''}</div>
+        <div style="font-size:10.5px;color:var(--t3)">@${u.username} · ${u.branch||'—'}</div></div>
+      <div>${rb}</div>
+      <div style="font-size:11px;color:var(--t2)">${u.branch||'—'}</div>
+      <div style="display:flex;gap:4px">
+        <button class="ua e" onclick="openEditUser('${u.id}')">✏️</button>
+        ${!isSelf?`<button class="ua d" onclick="delUser('${u.id}')">🗑</button>`:'<div style="width:26px"></div>'}
+      </div>
+    </div>`);
+  });
+}
+window.openEditUser=id=>{
+  const u=id?users.find(x=>x.id===id):null;
+  document.getElementById('euId').value=u?u.id:'';
+  document.getElementById('euN').value=u?u.name:'';
+  document.getElementById('euU').value=u?u.username:'';
+  document.getElementById('euP').value='';
+  popBrSel();
+  if(u)document.getElementById('euBr').value=u.branch;
+  document.getElementById('euR').value=u?u.role:'viewer';
+  document.getElementById('euTi').textContent=u?'แก้ไขผู้ใช้งาน':'เพิ่มผู้ใช้งานใหม่';
+  updateRolePreview();openM('editUserM');
+};
+document.getElementById('editUserForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const id=document.getElementById('euId').value||null;
+  const n=document.getElementById('euN').value.trim(),un=document.getElementById('euU').value.trim();
+  const pw=document.getElementById('euP').value,br=document.getElementById('euBr').value,ro=document.getElementById('euR').value;
+  if(!n||!un)return;
+  if(users.find(x=>x.username===un&&x.id!==id)){toast('ชื่อผู้ใช้นี้มีอยู่แล้ว','⚠️');return;}
+  const payload={display_name:n,username:un,role:ro,branch_name:br};
+  if(pw)payload.password=pw;
+  if(id){
+    const {error}=await sb.from('hub_users').update(payload).eq('id',id);
+    if(!error){const idx=users.findIndex(x=>x.id===id);if(idx>=0){Object.assign(users[idx],{name:n,username:un,role:ro,branch:br});if(pw)users[idx].pw=pw;}if(curUser?.id===id){curUser={...users[idx]};curRole=curUser.role;localStorage.setItem('hub_cur',JSON.stringify(curUser));}}
+  }else{
+    const {data,error}=await sb.from('hub_users').insert({...payload,password:pw||'1234'}).select().single();
+    if(!error&&data)users.push({id:data.id,username:un,pw:pw||'1234',role:ro,name:n,branch:br});
+  }
+  closeM('editUserM');renderUserTable();refreshAll();toast('บันทึกผู้ใช้แล้วค่ะ');
+});
+window.delUser=async id=>{
+  if(!confirm('ลบผู้ใช้?'))return;
+  await sb.from('hub_users').delete().eq('id',id);users=users.filter(x=>x.id!==id);renderUserTable();toast('ลบผู้ใช้แล้ว','🗑');
+};
+window.openUserMgmt=()=>{renderUserTable();openM('userMgmtM');};
+
+/* ========== FILE INBOX ========== */
+window.openFileInbox=async()=>{
+  openM('fileInboxM');
+  const sel=document.getElementById('inboxAnnFilter');
+  sel.innerHTML='<option value="all">📋 ทุกประกาศ</option>';
+  anns.filter(a=>a.reqFile).forEach(a=>{
+    sel.insertAdjacentHTML('beforeend',`<option value="${a.id}">${a.title.substring(0,28)}${a.title.length>28?'...':''}</option>`);
+  });
+  // branch filter
+  const bsel=document.getElementById('inboxBranchFilter');
+  bsel.innerHTML='<option value="all">🏪 ทุกสาขา</option>';
+  branches.forEach(b=>bsel.insertAdjacentHTML('beforeend',`<option value="${b}">${b}</option>`));
+  await renderInbox();
+};
+
+window.renderInbox=async()=>{
+  const listEl=document.getElementById('inboxList');
+  const statsEl=document.getElementById('inboxStats');
+  listEl.innerHTML=`<div style="text-align:center;padding:24px;color:var(--t3)">⏳ กำลังโหลด...</div>`;
+
+  const annFilter=document.getElementById('inboxAnnFilter').value;
+  const brFilter=document.getElementById('inboxBranchFilter').value;
+  const searchQ=(document.getElementById('inboxSearch').value||'').toLowerCase();
+  const viewModeEl=document.getElementById('inboxViewMode');
+  const viewMode=viewModeEl.value;
+
+  // ถ้า viewMode=branch แต่ยังไม่ได้เลือกประกาศ → แจ้งเตือน
+  if(viewMode==='branch'&&annFilter==='all'){
+    listEl.innerHTML=`<div style="text-align:center;padding:24px;color:var(--o500);font-size:13px">
+      📋 กรุณาเลือกประกาศก่อน เพื่อดูสถานะสาขา</div>`;
+    return;
+  }
+
+  let query=sb.from('file_replies').select('*').order('created_at',{ascending:false});
+  if(annFilter!=='all') query=query.eq('announcement_id',annFilter);
+  if(brFilter!=='all') query=query.eq('branch_name',brFilter);
+  const {data:replies,error}=await query;
+  if(error){listEl.innerHTML=`<div style="text-align:center;padding:20px;color:var(--red)">❌ โหลดไม่ได้</div>`;return;}
+
+  let allReplies=(replies||[]).filter(r=>
+    !searchQ||(r.file_name||'').toLowerCase().includes(searchQ)||(r.submitted_by||'').toLowerCase().includes(searchQ)||(r.branch_name||'').toLowerCase().includes(searchQ)
+  );
+
+  // stats
+  const totalFiles=allReplies.length;
+  const brSet=[...new Set(allReplies.map(r=>r.branch_name).filter(Boolean))];
+  const today=allReplies.filter(r=>new Date(r.created_at).toDateString()===new Date().toDateString()).length;
+  const imgCount=allReplies.filter(r=>r.file_name.match(/\.(jpg|jpeg|png|gif|webp)$/i)).length;
+  const pdfCount=allReplies.filter(r=>r.file_name.match(/\.pdf$/i)).length;
+
+  statsEl.innerHTML=`
+    <div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:#8b5cf6">📎 ${totalFiles} ไฟล์</div>
+    <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:#16a34a">🏪 ${brSet.length} สาขา</div>
+    <div style="background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--o600)">🆕 วันนี้ ${today}</div>
+    <div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:#3b82f6">🖼 ${imgCount} รูป</div>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--red)">📄 ${pdfCount} PDF</div>`;
+
+  const badge=document.getElementById('inboxBadge');
+  if(badge){if(today>0){badge.textContent=today;badge.classList.remove('hidden');}else badge.classList.add('hidden');}
+
+  if(!allReplies.length){
+    listEl.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:36px;margin-bottom:10px">📭</div><div style="font-weight:600">ไม่พบไฟล์</div></div>`;
+    return;
+  }
+
+  // ===== VIEW MODE: BRANCH STATUS =====
+  if(viewMode==='branch'){
+    // show which branches sent / not sent for selected announcement
+    const selAnn=anns.find(a=>a.id===annFilter);
+    const targetBranches=selAnn?.branches?.includes('ทุกสาขา')?branches:(selAnn?.branches||branches);
+    const sentBranches=[...new Set(allReplies.map(r=>r.branch_name).filter(Boolean))];
+    const notSent=targetBranches.filter(b=>!sentBranches.includes(b));
+
+    listEl.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px">
+          <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">✅ ส่งแล้ว (${sentBranches.length} สาขา)</div>
+          ${sentBranches.length?sentBranches.map(b=>{
+            const cnt=allReplies.filter(r=>r.branch_name===b).length;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:8px;background:rgba(34,197,94,.06);margin-bottom:3px;font-size:12px">
+              <span>🏪 ${b}</span>
+              <span style="background:#16a34a;color:#fff;border-radius:50px;padding:1px 8px;font-size:10px;font-weight:700">${cnt} ไฟล์</span>
+            </div>`;
+          }).join(''):`<div style="font-size:11px;color:var(--t3)">ยังไม่มี</div>`}
+        </div>
+        <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:12px;padding:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px">⏳ ยังไม่ส่ง (${notSent.length} สาขา)</div>
+          ${notSent.length?notSent.map(b=>`<div style="padding:5px 8px;border-radius:8px;background:rgba(239,68,68,.04);margin-bottom:3px;font-size:12px;color:var(--t2)">🏪 ${b}</div>`).join(''):`<div style="font-size:11px;color:#16a34a;font-weight:600">✅ ทุกสาขาส่งมาแล้ว!</div>`}
+        </div>
+      </div>`;
+    return;
+  }
+
+  // ===== VIEW MODE: GRID (รูปภาพ preview) =====
+  if(viewMode==='grid'){
+    const imgFiles=allReplies.filter(r=>r.file_name.match(/\.(jpg|jpeg|png|gif|webp)$/i));
+    const otherFiles=allReplies.filter(r=>!r.file_name.match(/\.(jpg|jpeg|png|gif|webp)$/i));
+    listEl.innerHTML='';
+    if(imgFiles.length){
+      listEl.insertAdjacentHTML('beforeend',`<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">🖼 รูปภาพ (${imgFiles.length} รูป)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px">
+          ${imgFiles.map(r=>`
+            <div style="border-radius:10px;overflow:hidden;border:1px solid var(--bd2);cursor:pointer;position:relative" onclick="previewImg('${r.file_url}','${r.file_name}','${r.submitted_by}','${r.branch_name||'—'}')">
+              <img src="${r.file_url}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🖼</text></svg>'">
+              <div style="padding:5px 7px;background:var(--sf2)">
+                <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.submitted_by}</div>
+                <div style="font-size:9px;color:var(--t3)">${r.branch_name||'—'}</div>
+              </div>
+              <div style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);border-radius:50px;padding:2px 7px;font-size:9px;color:#fff">${(r.file_size/1024).toFixed(0)}KB</div>
+            </div>`).join('')}
+        </div>`);
+    }
+    if(otherFiles.length){
+      listEl.insertAdjacentHTML('beforeend',`<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">📎 ไฟล์อื่นๆ (${otherFiles.length} ไฟล์)</div>`);
+      otherFiles.forEach(r=>{
+        const ext=r.file_name.match(/\.pdf$/i)?'📄':r.file_name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎';
+        const dt=new Date(r.created_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+        listEl.insertAdjacentHTML('beforeend',renderFileRow(r,ext,dt));
+      });
+    }
+    return;
+  }
+
+  // ===== VIEW MODE: LIST (grouped by announcement) =====
+  const grouped={};
+  allReplies.forEach(r=>{
+    if(!grouped[r.announcement_id]) grouped[r.announcement_id]={files:[],annTitle:'—'};
+    grouped[r.announcement_id].files.push(r);
+  });
+  Object.keys(grouped).forEach(aid=>{
+    const ann=anns.find(a=>a.id===aid);
+    if(ann) grouped[aid].annTitle=ann.title;
+  });
+  listEl.innerHTML='';
+  Object.entries(grouped).forEach(([aid,g])=>{
+    const filesHtml=g.files.map(r=>{
+      const isImg=r.file_name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+      const ext=isImg?'🖼':r.file_name.match(/\.pdf$/i)?'📄':r.file_name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎';
+      const dt=new Date(r.created_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd2);transition:background .15s;cursor:pointer"
+        onmouseover="this.style.background='rgba(139,92,246,.05)'" onmouseout="this.style.background='var(--sf2)'"
+        onclick="${isImg&&r.file_url?`previewImg('${r.file_url}','${r.file_name}','${r.submitted_by}','${r.branch_name||'—'}')`:r.file_url?`window.open('${r.file_url}','_blank')`:''}" >
+        ${isImg&&r.file_url
+          ?`<img src="${r.file_url}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--bd2)" onerror="this.outerHTML='<span style=font-size:26px;flex-shrink:0>🖼</span>'">`
+          :`<span style="font-size:26px;flex-shrink:0">${ext}</span>`}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.file_name}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;line-height:1.6">
+            <span>👤 ${r.submitted_by}</span><span>🏪 ${r.branch_name||'—'}</span><span>🕒 ${dt}</span>
+            ${r.file_size?`<span>💾 ${(r.file_size/1024).toFixed(1)}KB</span>`:''}
+          </div>
+        </div>
+        ${r.file_url?`<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:120px">
+          ${isImg?`<button onclick="event.stopPropagation();previewImg('${r.file_url}','${r.file_name}','${r.submitted_by}','${r.branch_name||'—'}')" class="btn btn-sm" style="border-radius:8px;background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.2);white-space:nowrap">👁 ดู</button>`:''}
+          <a href="${r.file_url}" target="_blank" onclick="event.stopPropagation()" class="btn btn-sm" style="border-radius:8px;background:rgba(139,92,246,.1);color:#8b5cf6;border:1px solid rgba(139,92,246,.2);white-space:nowrap">⬇ โหลด</a>
+        </div>`:''}
+      </div>`;
+    }).join('');
+    listEl.insertAdjacentHTML('beforeend',`
+      <div style="border:1px solid var(--bd2);border-radius:12px;overflow:hidden;margin-bottom:6px">
+        <div style="padding:10px 14px;background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(139,92,246,.04));border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:8px;cursor:pointer"
+          onclick="const b=this.nextElementSibling;b.style.display=b.style.display==='none'?'flex':'none';this.querySelector('.arr').textContent=b.style.display==='none'?'▸':'▾'">
+          <span style="font-size:14px">📋</span>
+          <div style="flex:1;font-size:13px;font-weight:700">${g.annTitle}</div>
+          <span style="background:rgba(139,92,246,.15);color:#8b5cf6;border-radius:50px;padding:2px 10px;font-size:11px;font-weight:700">${g.files.length} ไฟล์</span>
+          <span class="arr" style="color:var(--t3);font-size:12px;width:14px">▾</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;padding:8px">${filesHtml}</div>
+      </div>`);
+  });
+};
+
+function renderFileRow(r,ext,dt){
+  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd2);margin-bottom:4px">
+    <span style="font-size:22px">${ext}</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.file_name}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">👤 ${r.submitted_by} · 🏪 ${r.branch_name||'—'} · 🕒 ${dt}</div>
+    </div>
+    ${r.file_url?`<a href="${r.file_url}" target="_blank" class="btn btn-sm" style="border-radius:8px;background:rgba(139,92,246,.1);color:#8b5cf6;border:1px solid rgba(139,92,246,.2);flex-shrink:0">⬇ โหลด</a>`:''}
+  </div>`;
+}
+
+// Image preview lightbox
+window.previewImg=(url,name,by,branch)=>{
+  let lb=document.getElementById('imgLightbox');
+  if(!lb){
+    lb=document.createElement('div');lb.id='imgLightbox';
+    lb.style.cssText='position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;cursor:zoom-out';
+    lb.onclick=()=>lb.remove();
+    document.body.appendChild(lb);
+  }
+  lb.innerHTML=`
+    <div style="position:absolute;top:16px;right:16px;display:flex;gap:8px">
+      <a href="${url}" target="_blank" onclick="event.stopPropagation()" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px">⬇ ดาวน์โหลด</a>
+      <button onclick="document.getElementById('imgLightbox').remove()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <img src="${url}" style="max-width:90vw;max-height:80vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5);object-fit:contain" onclick="event.stopPropagation()">
+    <div style="margin-top:14px;text-align:center">
+      <div style="font-size:14px;font-weight:700;color:#fff">${name}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px">👤 ${by} · 🏪 ${branch}</div>
+    </div>`;
+};
+
+/* ========== DASHBOARD ========== */
+window.openDash=()=>{renderDash();openM('dashMd');};
+function renderDash(){
+  const dc=document.getElementById('dashCont');
+  const total=anns.length,done=anns.filter(a=>a.status==='done').length,ongoing=anns.filter(a=>a.status==='ongoing').length,urgent=anns.filter(a=>a.cat==='urgent').length;
+  const byCat=Object.entries(CATS).filter(([k])=>k!=='all').map(([k,v])=>({l:v.icon+' '+v.label,n:anns.filter(a=>a.cat===k).length})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n);
+  const maxC=Math.max(...byCat.map(x=>x.n),1);
+  const byBr=branches.map(b=>({l:b,n:anns.filter(a=>a.branches.includes('ทุกสาขา')||a.branches.includes(b)).length})).sort((a,b)=>b.n-a.n).slice(0,10);
+  const maxB=Math.max(...byBr.map(x=>x.n),1);
+  dc.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+    <div class="stat-box"><div class="sv">${total}</div><div class="sl">ทั้งหมด</div></div>
+    <div class="stat-box"><div class="sv" style="color:var(--red)">${urgent}</div><div class="sl">งานด่วน</div></div>
+    <div class="stat-box"><div class="sv" style="color:var(--yel)">${ongoing}</div><div class="sl">ดำเนินการ</div></div>
+    <div class="stat-box"><div class="sv" style="color:var(--grn)">${done}</div><div class="sl">เสร็จแล้ว</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px">📊 ตามหมวดหมู่</div>
+      ${byCat.map(x=>`<div class="chart-bar-row"><div class="chart-bar-lbl">${x.l}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(x.n/maxC*100).toFixed(1)}%"></div></div><div class="chart-bar-val">${x.n}</div></div>`).join('')}</div>
+    <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px">🏪 ตามสาขา (Top 10)</div>
+      ${byBr.map(x=>`<div class="chart-bar-row"><div class="chart-bar-lbl">${x.l}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(x.n/maxB*100).toFixed(1)}%;background:linear-gradient(90deg,#fb923c,#ea580c)"></div></div><div class="chart-bar-val">${x.n}</div></div>`).join('')}</div>
+  </div>
+  <div style="margin-top:16px">
+    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px">👥 ผู้ใช้งานทั้งหมด (${users.length} คน)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${users.map(u=>`<div style="display:flex;align-items:center;gap:6px;background:var(--sf2);border:1px solid var(--bd2);border-radius:50px;padding:4px 12px;font-size:12px">
+        <div class="uav ${u.role}" style="width:22px;height:22px;font-size:10px">${(u.name||'?')[0]}</div>
+        <span>${u.name}</span><span class="rb ${u.role}" style="font-size:10px">${u.role}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ========== EXPORT CSV ========== */
+window.exportCSV=()=>{
+  const rows=[['ID','หัวข้อ','หมวดหมู่','สถานะ','สาขา','วันที่สร้าง','วันหมดอายุ','ปักหมุด','ต้องการไฟล์']];
+  anns.forEach(a=>rows.push([a.id,a.title,CATS[a.cat]?.label||a.cat,a.status,a.branches.join('|'),a.ts,a.expiry||'',a.pinned?'ใช่':'ไม่',a.reqFile?'ใช่':'ไม่']));
+  const csv=rows.map(r=>r.map(c=>`"${(c||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download='announcements_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+  toast('Export CSV สำเร็จค่ะ','📥');
+};
+
+/* ========== WORK STATUS FUNCTIONS ========== */
+
+// Toggle auto-complete UI
+window.toggleAutoComplete=()=>{
+  const on=document.getElementById('autoCompTgl').classList.contains('on');
+  document.getElementById('reqBranchWrap').style.display=on?'block':'none';
+  if(on) buildReqBrCkList();
+};
+
+function buildReqBrCkList(){
+  const c=document.getElementById('reqBrCkList');if(!c)return;
+  c.innerHTML='';
+  branches.forEach(b=>{
+    c.insertAdjacentHTML('beforeend',`<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);padding:4px 10px;border-radius:50px">
+      <input type="checkbox" name="reqBrCk" value="${b}" style="accent-color:#22c55e"> ${b}</label>`);
+  });
+}
+
+// เมื่อ openAddAnn ต้องรีเซ็ต autoComplete toggle ด้วย
+const _origOpenAddAnn=window.openAddAnn;
+window.openAddAnn=()=>{
+  _origOpenAddAnn();
+  setTimeout(()=>{
+    document.getElementById('autoCompTgl')?.classList.remove('on');
+    document.getElementById('reqBranchWrap').style.display='none';
+  },50);
+};
+
+// Toggle สถานะ done/ongoing ด้วยมือ
+window.toggleAnnDone=async(id,currentStatus)=>{
+  const newStatus=currentStatus==='done'?'ongoing':'done';
+  const {error}=await sb.from('announcements').update({status:newStatus}).eq('id',id);
+  if(!error){
+    const idx=anns.findIndex(a=>a.id===id);
+    if(idx>=0) anns[idx].status=newStatus;
+    renderCards();buildFilterBar();renderStats();
+    closeM('annDetailM');
+    toast(newStatus==='done'?'✅ มาร์คเสร็จแล้วค่ะ':'🔄 เปลี่ยนกลับเป็นดำเนินการแล้วค่ะ');
+  }
+};
+
+// เช็ค auto-complete หลังส่งไฟล์
+async function checkAutoComplete(annId){
+  const ann=anns.find(a=>a.id===annId);
+  if(!ann||!ann.autoComplete||ann.status==='done') return;
+
+  // กำหนดสาขาที่ต้องส่ง
+  const reqBr=ann.requiredBranches?.length>0
+    ? ann.requiredBranches
+    : ann.branches.includes('ทุกสาขา') ? branches : ann.branches;
+
+  // ดึงไฟล์ที่ส่งมาแล้ว
+  const {data:replies}=await sb.from('file_replies').select('branch_name').eq('announcement_id',annId);
+  const sentBr=[...new Set((replies||[]).map(r=>r.branch_name).filter(Boolean))];
+
+  // เช็คว่าครบมั้ย
+  const allDone=reqBr.every(b=>sentBr.includes(b));
+  if(allDone){
+    const {error}=await sb.from('announcements').update({status:'done'}).eq('id',annId);
+    if(!error){
+      const idx=anns.findIndex(a=>a.id===annId);
+      if(idx>=0) anns[idx].status='done';
+      renderCards();renderStats();buildFilterBar();
+      toast(`✅ "${ann.title}" เปลี่ยนเป็นเสร็จแล้วอัตโนมัติ! ทุกสาขาส่งงานครบแล้วค่ะ`);
+    }
+  }
+}
+
+// Revision Request
+window.openRevisionRequest=async id=>{
+  const ann=anns.find(a=>a.id===id);if(!ann)return;
+  document.getElementById('revAnnId').value=id;
+  document.getElementById('revAnnTitle').textContent=ann.title;
+
+  // โหลดสาขาที่ส่งไฟล์มาแล้ว
+  const {data:replies}=await sb.from('file_replies').select('branch_name').eq('announcement_id',id);
+  const sentBr=[...new Set((replies||[]).map(r=>r.branch_name).filter(Boolean))];
+
+  const c=document.getElementById('revBranchList');
+  c.innerHTML='';
+  const targetBr=ann.branches.includes('ทุกสาขา')?branches:ann.branches;
+  targetBr.forEach(b=>{
+    const hasSent=sentBr.includes(b);
+    c.insertAdjacentHTML('beforeend',`
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--bd2);cursor:pointer;background:var(--sf2);transition:all .15s" onmouseover="this.style.background='rgba(239,68,68,.05)'" onmouseout="this.style.background='var(--sf2)'">
+        <input type="checkbox" name="revBrCk" value="${b}" style="accent-color:var(--red);width:15px;height:15px">
+        <span style="flex:1;font-size:13px;font-weight:600">${b}</span>
+        ${hasSent?`<span style="font-size:10px;background:rgba(34,197,94,.12);color:#16a34a;border-radius:50px;padding:2px 8px;font-weight:600">ส่งมาแล้ว</span>`:`<span style="font-size:10px;color:var(--t3)">ยังไม่ส่ง</span>`}
+      </label>`);
+  });
+  closeM('annDetailM');
+  openM('revisionM');
+};
+
+document.getElementById('revisionForm')?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const annId=document.getElementById('revAnnId').value;
+  const reason=document.getElementById('revReason').value.trim();
+  const selBr=Array.from(document.querySelectorAll('[name="revBrCk"]:checked')).map(c=>c.value);
+  if(!selBr.length){toast('กรุณาเลือกสาขาที่ต้องแก้ไขค่ะ','⚠️');return;}
+  if(!reason){toast('กรุณาระบุเหตุผลค่ะ','⚠️');return;}
+
+  const btn=e.target.querySelector('button[type="submit"]');
+  btn.innerHTML='⏳ กำลังส่ง...';btn.disabled=true;
+
+  // insert revision requests ทีละสาขา
+  const inserts=selBr.map(b=>({
+    announcement_id:annId,
+    branch_name:b,
+    reason,
+    requested_by:curUser?.name||'admin',
+    status:'pending'
+  }));
+  const {error}=await sb.from('revision_requests').insert(inserts);
+
+  if(!error){
+    // เปลี่ยนสถานะประกาศกลับเป็น ongoing
+    await sb.from('announcements').update({status:'ongoing'}).eq('id',annId);
+    const idx=anns.findIndex(a=>a.id===annId);
+    if(idx>=0){anns[idx].status='ongoing';anns[idx].pendingRevisions=selBr.length;}
+    e.target.reset();
+    closeM('revisionM');
+    renderCards();buildFilterBar();renderStats();
+    toast(`🔄 ส่งคำขอแก้ไขไปยัง ${selBr.length} สาขาแล้วค่ะ`);
+    // อัปเดต badge
+    updatePendingRevBadge();
+  } else {
+    toast('เกิดข้อผิดพลาด','❌');
+  }
+  btn.innerHTML='🔄 ส่งคำขอแก้ไข';btn.disabled=false;
+});
+
+async function updatePendingRevBadge(){
+  const {data}=await sb.from('revision_requests').select('id').eq('status','pending');
+  const cnt=(data||[]).length;
+  const badge=document.getElementById('pendingRevBadge');
+  if(badge){
+    if(cnt>0){badge.textContent=cnt;badge.classList.remove('hidden');}
+    else badge.classList.add('hidden');
+  }
+}
+
+/* ========== MY REVISIONS — แจ้งเตือนสาขาที่ต้องส่งงานแก้ไข ========== */
+let myPendingRevisions=[];
+
+async function loadMyRevisions(){
+  if(!curUser||curRole==='admin'||curRole==='editor'||curRole==='viewer') return;
+  const branch=curUser.branch||'';
+  if(!branch) return;
+  const {data,error}=await sb.from('revision_requests')
+    .select('*')
+    .eq('branch_name',branch)
+    .eq('status','pending')
+    .order('created_at',{ascending:false});
+  if(!error) myPendingRevisions=data||[];
+  _updateRevUI();
+}
+
+function _updateRevUI(){
+  const cnt=myPendingRevisions.length;
+  const banner=document.getElementById('revNotifBanner');
+  const sbBtn=document.getElementById('myRevSbBtn');
+  const sbBadge=document.getElementById('myRevSbBadge');
+  if(sbBtn) sbBtn.style.display=curRole==='user'?'block':'none';
+  if(!banner) return;
+  if(cnt>0){
+    banner.style.display='flex';
+    banner.className='rev-banner-pulse';
+    banner.style.cssText='display:flex;border-radius:14px;padding:13px 16px;margin-bottom:12px;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 50%,#991b1b 100%);border:1px solid rgba(239,68,68,.4);box-shadow:0 4px 20px -4px rgba(239,68,68,.5);animation:revSlideIn .4s cubic-bezier(.34,1.3,.64,1);align-items:center;gap:12px;width:100%';
+    banner.innerHTML=`
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;border:1.5px solid rgba(255,255,255,.3)">🔄</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px">มีงานที่ต้องแก้ไข ${cnt} รายการ!</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.78);line-height:1.5">Admin ขอให้สาขาของคุณส่งงานแก้ไขกลับมา กรุณาดำเนินการโดยเร็วค่ะ</div>
+      </div>
+      <button onclick="openMyRevisions()" style="background:rgba(255,255,255,.22);border:1.5px solid rgba(255,255,255,.4);border-radius:10px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Prompt',sans-serif;white-space:nowrap;flex-shrink:0;transition:all .18s" onmouseover="this.style.background='rgba(255,255,255,.35)'" onmouseout="this.style.background='rgba(255,255,255,.22)'">ดูรายการ →</button>
+      <button onclick="this.closest('#revNotifBanner').style.display='none'" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:8px;color:rgba(255,255,255,.8);cursor:pointer;font-size:14px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>`;
+    if(sbBadge){sbBadge.textContent=cnt;sbBadge.classList.remove('hidden');}
+    setTimeout(()=>toast(`🔄 มีงานที่ต้องแก้ไข ${cnt} รายการ กรุณาตรวจสอบด่วนค่ะ`,'🔴'),900);
+  } else {
+    banner.style.display='none';
+    if(sbBadge) sbBadge.classList.add('hidden');
+  }
+}
+
+window.openMyRevisions=async()=>{
+  await loadMyRevisions();
+  const list=document.getElementById('myRevList');
+  if(!list) return;
+  if(!myPendingRevisions.length){
+    list.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--t3)">
+      <div style="font-size:46px;margin-bottom:10px">✅</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">ไม่มีงานค้างแก้ไขค่ะ</div>
+      <div style="font-size:12px">ทุกงานส่งครบแล้ว!</div>
+    </div>`;
+    openM('myRevisionM');return;
+  }
+  list.innerHTML=myPendingRevisions.map(r=>{
+    const ann=anns.find(a=>a.id===r.announcement_id);
+    const cat=ann?(CATS[ann.cat]||CATS.general):CATS.general;
+    const dt=new Date(r.created_at).toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const isOld=(Date.now()-new Date(r.created_at))>86400000*2; // >2 วัน
+    return `
+    <div class="my-rev-card">
+      <div style="height:4px;background:linear-gradient(90deg,var(--red),#f97316)"></div>
+      <div style="padding:15px 16px">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:11px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+              <span style="font-size:10px;font-weight:700;padding:2px 9px;border-radius:50px;background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)">🔄 รอแก้ไข</span>
+              ${ann?`<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--cl,rgba(249,115,22,.1));color:var(--o600)" class="cat-${ann.cat}">${cat.icon} ${cat.label}</span>`:''}
+              ${isOld?`<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.25)">⚠️ ค้างนาน</span>`:''}
+            </div>
+            <div style="font-size:14px;font-weight:800;color:var(--t1);line-height:1.4;margin-bottom:4px">${ann?.title||'(ไม่พบประกาศ)'}</div>
+            <div style="font-size:10.5px;color:var(--t3);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span>🕒 ${dt}</span>
+              <span>👤 ขอโดย: <strong>${r.requested_by||'Admin'}</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="rev-reason-box">
+          <div style="font-size:10.5px;font-weight:700;color:var(--red);margin-bottom:5px;display:flex;align-items:center;gap:4px">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            เหตุผลที่ต้องแก้ไข
+          </div>
+          <div style="font-size:13px;color:var(--t1);line-height:1.75;white-space:pre-wrap">${r.reason||'(ไม่ระบุเหตุผล)'}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${ann?.reqFile
+            ?`<button onclick="closeM('myRevisionM');openViewAnn('${r.announcement_id}')" class="btn btn-o" style="flex:1;border-radius:10px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                📤 ส่งงานแก้ไข
+              </button>`
+            :`<button onclick="closeM('myRevisionM');openAnnDetail('${r.announcement_id}')" class="btn btn-gh" style="flex:1;border-radius:10px">
+                👁 ดูประกาศ
+              </button>`}
+          <button onclick="openAnnDetail('${r.announcement_id}')" class="btn btn-gh btn-sm" style="border-radius:10px" title="ดูรายละเอียดประกาศ">📋</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  openM('myRevisionM');
+};
+
+// ปิด revision request หลังส่งไฟล์สำเร็จ
+async function resolveMyRevision(annId){
+  if(!curUser?.branch) return;
+  const {error}=await sb.from('revision_requests')
+    .update({status:'resolved'})
+    .eq('announcement_id',annId)
+    .eq('branch_name',curUser.branch)
+    .eq('status','pending');
+  if(!error){
+    myPendingRevisions=myPendingRevisions.filter(r=>r.announcement_id!==annId);
+    _updateRevUI();
+    // ลด pendingRevisions count ใน anns
+    const idx=anns.findIndex(a=>a.id===annId);
+    if(idx>=0&&anns[idx].pendingRevisions>0) anns[idx].pendingRevisions--;
+    renderCards();
+  }
+}
+
+// Work Report
+window.openWorkReport=async()=>{
+  // build filter
+  const sel=document.getElementById('reportAnnFilter');
+  sel.innerHTML='<option value="all">📋 ทุกประกาศ</option>';
+  anns.filter(a=>a.reqFile).forEach(a=>{
+    sel.insertAdjacentHTML('beforeend',`<option value="${a.id}">${a.title.substring(0,30)}${a.title.length>30?'...':''}</option>`);
+  });
+  openM('workReportM');
+  await renderWorkReport();
+  updatePendingRevBadge();
+};
+
+window.renderWorkReport=async()=>{
+  const cont=document.getElementById('reportContent');
+  const statsEl=document.getElementById('reportStats');
+  cont.innerHTML=`<div style="text-align:center;padding:20px;color:var(--t3)">⏳ กำลังโหลด...</div>`;
+
+  const annFilter=document.getElementById('reportAnnFilter').value;
+
+  let revQuery=sb.from('revision_requests').select('*').order('created_at',{ascending:false});
+  if(annFilter!=='all') revQuery=revQuery.eq('announcement_id',annFilter);
+  const {data:revisions}=await revQuery;
+  const allRevs=revisions||[];
+
+  const pending=allRevs.filter(r=>r.status==='pending').length;
+  const resubmitted=allRevs.filter(r=>r.status==='resubmitted').length;
+  const approved=allRevs.filter(r=>r.status==='approved').length;
+
+  statsEl.innerHTML=`
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--red)">🔄 รอแก้ไข ${pending}</div>
+    <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:#d97706">📤 ส่งใหม่แล้ว ${resubmitted}</div>
+    <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:50px;padding:4px 14px;font-size:12px;font-weight:700;color:#16a34a">✅ อนุมัติแล้ว ${approved}</div>`;
+
+  if(!allRevs.length){
+    cont.innerHTML=`<div style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:36px;margin-bottom:10px">✅</div><div style="font-weight:600">ไม่มีคำขอแก้ไขค่ะ</div></div>`;
+    return;
+  }
+
+  // group by announcement
+  const grouped={};
+  allRevs.forEach(r=>{
+    if(!grouped[r.announcement_id]) grouped[r.announcement_id]={items:[],title:'—'};
+    grouped[r.announcement_id].items.push(r);
+  });
+  Object.keys(grouped).forEach(aid=>{
+    const ann=anns.find(a=>a.id===aid);
+    if(ann) grouped[aid].title=ann.title;
+  });
+
+  const stMap={
+    pending:`<span style="background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2);border-radius:50px;padding:2px 8px;font-size:10px;font-weight:700">🔄 รอแก้ไข</span>`,
+    resubmitted:`<span style="background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.2);border-radius:50px;padding:2px 8px;font-size:10px;font-weight:700">📤 ส่งใหม่แล้ว</span>`,
+    approved:`<span style="background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.2);border-radius:50px;padding:2px 8px;font-size:10px;font-weight:700">✅ อนุมัติแล้ว</span>`
+  };
+
+  cont.innerHTML='';
+  Object.entries(grouped).forEach(([aid,g])=>{
+    const itemsHtml=g.items.map(r=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd2);margin-bottom:5px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:700">🏪 ${r.branch_name}</span>
+            ${stMap[r.status]||''}
+          </div>
+          <div style="font-size:12px;color:var(--t2);background:rgba(239,68,68,.05);border-radius:8px;padding:6px 10px;margin-bottom:4px">
+            📝 ${r.reason}
+          </div>
+          <div style="font-size:10px;color:var(--t3)">ขอโดย ${r.requested_by} · ${new Date(r.created_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+          ${r.status==='pending'?`
+            <button onclick="updateRevStatus('${r.id}','resubmitted')" class="btn btn-sm" style="border-radius:8px;background:rgba(245,158,11,.1);color:#d97706;border:1px solid rgba(245,158,11,.2);font-size:11px">📤 รับใหม่</button>`:``}
+          ${r.status!=='approved'?`
+            <button onclick="updateRevStatus('${r.id}','approved')" class="btn btn-sm" style="border-radius:8px;background:rgba(34,197,94,.1);color:#16a34a;border:1px solid rgba(34,197,94,.2);font-size:11px">✅ อนุมัติ</button>`:``}
+          <button onclick="deleteRevision('${r.id}')" class="btn btn-sm btn-rd" style="border-radius:8px;font-size:11px">🗑</button>
+        </div>
+      </div>`).join('');
+
+    cont.insertAdjacentHTML('beforeend',`
+      <div style="border:1px solid var(--bd2);border-radius:12px;overflow:hidden;margin-bottom:8px">
+        <div style="padding:10px 14px;background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(59,130,246,.04));border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:8px;cursor:pointer"
+          onclick="const b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.arr').textContent=b.style.display==='none'?'▸':'▾'">
+          <span style="font-size:14px">📋</span>
+          <div style="flex:1;font-size:13px;font-weight:700">${g.title}</div>
+          <span style="background:rgba(59,130,246,.15);color:#3b82f6;border-radius:50px;padding:2px 10px;font-size:11px;font-weight:700">${g.items.length} รายการ</span>
+          <span class="arr" style="color:var(--t3);font-size:12px">▾</span>
+        </div>
+        <div style="padding:8px">${itemsHtml}</div>
+      </div>`);
+  });
+};
+
+window.updateRevStatus=async(id,newStatus)=>{
+  await sb.from('revision_requests').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',id);
+  toast(newStatus==='approved'?'✅ อนุมัติแล้วค่ะ':'📤 รับงานใหม่แล้วค่ะ');
+  renderWorkReport();
+  updatePendingRevBadge();
+};
+
+window.deleteRevision=async id=>{
+  if(!confirm('ลบรายการนี้?'))return;
+  await sb.from('revision_requests').delete().eq('id',id);
+  toast('ลบแล้วค่ะ','🗑');
+  renderWorkReport();
+  updatePendingRevBadge();
+};
+
+/* ========== INIT ========== */
+(async()=>{
+  await loadAll();
+  setupRealtime();
+  checkReminders();
+  updatePendingRevBadge();
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+})();
+</script>
+<!-- LINE SETTINGS MODAL -->
+<div id="lineSettingsM" class="mbk h">
+  <div class="mbox w">
+    <button onclick="closeM('lineSettingsM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div class="mhero" style="background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(34,197,94,.08));font-size:26px">💬</div>
+      <div>
+        <div style="font-size:17px;font-weight:800">ตั้งค่า LINE แจ้งเตือน</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">ส่งแจ้งเตือนกลุ่ม LINE เมื่อมีประกาศใหม่</div>
+      </div>
+    </div>
+
+    <!-- How-to -->
+    <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:13px 15px;margin-bottom:16px;font-size:12px;line-height:1.8;color:var(--t2)">
+      <div style="font-weight:700;color:#16a34a;margin-bottom:6px">📋 วิธีตั้งค่า (ฟรี 200 ข้อความ/เดือน)</div>
+      <ol style="padding-left:16px;display:flex;flex-direction:column;gap:3px">
+        <li>สร้าง <strong>LINE Official Account</strong> ฟรีที่ <a href="https://account.line.biz" target="_blank" style="color:#16a34a">account.line.biz</a></li>
+        <li>ไปที่ <strong>LINE Developers Console</strong> → เปิด Messaging API</li>
+        <li>คัดลอก <strong>Channel Access Token</strong> (Long-lived)</li>
+        <li><strong>Add bot เข้ากลุ่ม LINE</strong> ที่ต้องการแจ้งเตือน</li>
+        <li>รับ <strong>Group ID</strong> จาก Webhook event (ใช้ <a href="https://developers.line.biz/console/" target="_blank" style="color:#16a34a">webhook.site</a> ช่วยได้)</li>
+        <li>เพิ่ม <code style="background:var(--bd2);padding:1px 5px;border-radius:4px">action:'lineMessage'</code> ใน Apps Script ของคุณ</li>
+      </ol>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label class="lbl">Channel Access Token</label>
+        <input type="password" id="lineTokenInp" class="inp" placeholder="Bearer token จาก LINE Developers Console">
+      </div>
+      <div>
+        <label class="lbl">Group ID (หรือ Room ID)</label>
+        <input type="text" id="lineGroupInp" class="inp" placeholder="C... หรือ R... จาก Webhook event">
+      </div>
+      <div class="tgl-row" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--o50);border-radius:10px;border:1px solid rgba(249,115,22,.12)">
+        <button type="button" id="lineEnabledTgl" class="tgl" onclick="this.classList.toggle('on')"></button>
+        <span style="font-size:13px;font-weight:600">เปิดแจ้งเตือน LINE เมื่อมีประกาศใหม่</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button id="lineTestBtn" onclick="testLineMessage()" class="btn btn-gh" style="border-radius:10px;flex:1">🔔 ทดสอบส่ง</button>
+      <button onclick="saveLineSettings()" class="btn btn-o" style="border-radius:10px;flex:2">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANN DETAIL MODAL -->
+<div id="annDetailM" class="mbk h">
+  <div class="mbox w" style="max-width:560px;padding:26px">
+    <button onclick="closeM('annDetailM')" class="mcl">✕</button>
+    <div id="annDetailBody"></div>
+  </div>
+</div>
+
+<!-- COMMENT MODAL -->
+<div id="commentM" class="mbk h" data-ann-id="">
+  <div class="mbox w">
+    <button onclick="closeM('commentM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="mhero">💬</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:800;color:var(--o600)">ความคิดเห็น</div>
+        <div id="commentAnnTitle" style="font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      </div>
+    </div>
+    <div id="commentList" style="max-height:45vh;overflow-y:auto;padding:4px 0;margin-bottom:12px;border-bottom:1px solid var(--bd2)"></div>
+    <div id="commentLoginHint" style="font-size:12px;color:var(--t3);text-align:center;padding:8px;display:none">
+      กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น
+    </div>
+    <form id="commentFormEl" style="display:none;gap:8px;align-items:flex-end;margin-top:8px">
+      <textarea id="commentInput" class="inp" rows="2" placeholder="พิมพ์ความคิดเห็น..." style="flex:1;resize:none;border-radius:12px"></textarea>
+      <button type="submit" class="btn btn-o" style="border-radius:12px;flex-shrink:0;padding:10px 16px">ส่ง</button>
+    </form>
+  </div>
+</div>
+
+<!-- READ RECEIPT MODAL -->
+<div id="readReceiptM" class="mbk h">
+  <div class="mbox w">
+    <button onclick="closeM('readReceiptM')" class="mcl">✕</button>
+    <div id="readReceiptCont"></div>
+  </div>
+</div>
+
+<!-- TEMPLATE MODAL -->
+<div id="templateM" class="mbk h">
+  <div class="mbox w">
+    <button onclick="closeM('templateM')" class="mcl">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div class="mhero">📝</div>
+      <div style="flex:1"><div style="font-size:16px;font-weight:800">Template ประกาศ</div>
+        <div style="font-size:11px;color:var(--t3)">สร้างสำเร็จรูป ใช้ซ้ำได้</div></div>
+    </div>
+    <!-- list -->
+    <div id="templateList" style="margin-bottom:14px;max-height:35vh;overflow-y:auto"></div>
+    <div class="form-divider" style="display:flex;align-items:center;gap:10px;color:var(--t3);font-size:11px;margin-bottom:12px">
+      <div style="flex:1;height:1px;background:var(--bd2)"></div>สร้าง Template ใหม่<div style="flex:1;height:1px;background:var(--bd2)"></div>
+    </div>
+    <!-- create form -->
+    <form id="templateSaveForm" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="lbl">ชื่อ Template *</label><input type="text" id="tmplName" required class="inp" placeholder="เช่น รายงานประจำเดือน"></div>
+        <div><label class="lbl">หมวดหมู่</label>
+          <select id="tmplCat" class="inp">
+            <option value="urgent">🔴 งานด่วน</option>
+            <option value="general" selected>🟠 ทั่วไป</option>
+            <option value="training">🟣 อบรม</option>
+            <option value="promo">🟢 โปรโมชัน</option>
+            <option value="meeting">🔵 ประชุม</option>
+            <option value="info">🟡 แจ้งทราบ</option>
+          </select></div>
+      </div>
+      <div><label class="lbl">หัวข้อ (Template)</label><input type="text" id="tmplTitle" class="inp" placeholder="เช่น รายงานยอดขายเดือน [เดือน]"></div>
+      <div><label class="lbl">รายละเอียด (Template)</label><textarea id="tmplContent" rows="3" class="inp" style="resize:vertical" placeholder="รายละเอียด..."></textarea></div>
+      <div class="tgl-row"><button type="button" id="tmplReqFile" class="tgl" onclick="this.classList.toggle('on')"></button><span style="font-size:12px">ให้แนบไฟล์ตอบกลับ</span></div>
+      <button type="submit" class="btn btn-o btn-fw btn-lg">💾 บันทึก Template</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MOBILE BOTTOM NAV ===== -->
+<nav id="mobileNav">
+  <button class="mnav-btn active" onclick="mnavGo('home')" id="mnav-home">
+    <div class="mnav-ico">🏠</div>
+    <span>หน้าหลัก</span>
+  </button>
+  <button class="mnav-btn" onclick="mnavGo('filter')" id="mnav-filter">
+    <div class="mnav-ico">🔍</div>
+    <span>กรอง</span>
+  </button>
+  <button class="mnav-btn admin-only hidden" onclick="openAddAnn()" id="mnav-add">
+    <div class="mnav-ico" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 14px rgba(234,88,12,.4)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <span style="color:var(--o600)">เพิ่มประกาศ</span>
+  </button>
+  <button class="mnav-btn" onclick="mnavGo('login')" id="mnav-login">
+    <div class="mnav-ico">👤</div>
+    <span id="mnavLoginLbl">ล็อกอิน</span>
+  </button>
+  <button class="mnav-btn" onclick="openDrawer()" id="mnav-menu">
+    <div class="mnav-ico" style="position:relative">
+      ☰
+      <span id="mnavUnreadBadge" class="mnav-badge hidden">0</span>
+    </div>
+    <span>เมนู</span>
+  </button>
+</nav>
+
+<!-- ===== MOBILE DRAWER ===== -->
+<div id="mobileDrawer">
+  <div id="drawerBg" onclick="closeDrawer()"></div>
+  <div id="drawerPanel">
+    <div id="drawerTop">
+      <div style="display:flex;align-items:center;gap:10px;position:relative;z-index:1">
+        <div style="width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:17px;border:1px solid rgba(255,255,255,.3)">⚡</div>
+        <div>
+          <div style="font-size:14px;font-weight:900;color:#fff;letter-spacing:-.2px">Branch<span style="color:#fde68a">Flow</span></div>
+          <div id="drawerUserInfo" style="font-size:10px;color:rgba(255,255,255,.75);margin-top:1px">ผู้เยี่ยมชม</div>
+        </div>
+        <button onclick="closeDrawer()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:8px;width:28px;height:28px;color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+    </div>
+    <div id="drawerMenus" style="padding:10px 8px"></div>
+    <div id="drawerBot" class="admin-only hidden" style="display:flex;flex-direction:column;gap:6px">
+      <button onclick="openUserMgmt();closeDrawer()" class="btn btn-gh btn-fw admin-only hidden" style="border-radius:10px;font-size:12px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>จัดการผู้ใช้งาน
+      </button>
+      <button onclick="openBranchMgmt();closeDrawer()" class="btn btn-gh btn-fw admin-only hidden" style="border-radius:10px;font-size:12px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>จัดการสาขา
+      </button>
+      <button onclick="openFileInbox();closeDrawer()" class="btn btn-fw editor-only hidden" style="border-radius:10px;font-size:12px;background:rgba(139,92,246,.1);border:1.5px solid rgba(139,92,246,.25);color:#8b5cf6">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>กล่องรับไฟล์
+      </button>
+      <button onclick="openDash();closeDrawer()" class="btn btn-gh btn-fw admin-only hidden" style="border-radius:10px;font-size:12px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+      </button>
+      <button onclick="openM('addMenuM');closeDrawer()" class="btn btn-gh btn-fw admin-only hidden" style="border-radius:10px;font-size:12px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>เพิ่มเมนู
+      </button>
+      <button onclick="exportCSV()" class="btn btn-gh btn-fw admin-only hidden" style="border-radius:10px;font-size:12px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>Export CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== MOBILE NAV LOGIC ===== */
+window.openDrawer=()=>{
+  document.getElementById('mobileDrawer').classList.add('open');
+  renderDrawerMenus();
+};
+window.closeDrawer=()=>document.getElementById('mobileDrawer').classList.remove('open');
+
+function renderDrawerMenus(){
+  const c=document.getElementById('drawerMenus');c.innerHTML='';
+  menus.forEach(m=>{
+    const isV=curRole==='viewer',href=isV?'#':m.url,oc=isV?'onclick="vaAlert(event)"':'';
+    c.insertAdjacentHTML('beforeend',`
+      <a href="${href}" target="${!isV&&m.url!=='#'?'_blank':'_self'}" ${oc} class="mi ${m.url==='#'?'active':''}" onclick="closeDrawer()">
+        <span class="ico">${m.icon}</span>
+        <span style="flex:1">${m.name}</span>
+      </a>`);
+  });
+  // dark mode toggle
+  c.insertAdjacentHTML('beforeend',`
+    <div style="margin-top:8px;padding:8px;border-top:1px solid var(--bd2)">
+      <button onclick="toggleDark()" class="mi" style="width:100%;text-align:left">
+        <span class="ico">🌙</span><span>Dark Mode</span>
+      </button>
+      <button onclick="loadAnns(true)" class="mi" style="width:100%;text-align:left">
+        <span class="ico">🔄</span><span>รีเฟรชข้อมูล</span>
+      </button>
+      ${curRole==='user'?`<button onclick="openMyRevisions();closeDrawer()" class="mi" style="width:100%;text-align:left;color:var(--red)">
+        <span class="ico">🔄</span><span style="flex:1">งานที่ต้องแก้ไข</span>
+        ${myPendingRevisions.length>0?`<span style="background:var(--red);color:#fff;border-radius:50px;font-size:10px;font-weight:800;padding:1px 7px">${myPendingRevisions.length}</span>`:''}
+      </button>`:''}
+    </div>`);
+  // update drawer user info
+  const dui=document.getElementById('drawerUserInfo');
+  if(curUser) dui.textContent=`${curUser.name} · ${curUser.branch||curRole}`;
+  else dui.textContent='ผู้เยี่ยมชม — กดล็อกอินเพื่อใช้งาน';
+}
+
+window.mnavGo=action=>{
+  // update active state
+  document.querySelectorAll('.mnav-btn').forEach(b=>b.classList.remove('active'));
+  if(action==='home'){
+    document.getElementById('mnav-home')?.classList.add('active');
+    document.getElementById('searchQ').value='';
+    curCat='all';curStatus='all';buildFilterBar();renderCards();
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else if(action==='filter'){
+    document.getElementById('mnav-filter')?.classList.add('active');
+    document.getElementById('searchQ').focus();
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else if(action==='login'){
+    if(curUser) logout();
+    else openM('loginM');
+  }
+};
+
+function updateMobileNav(){
+  const lbl=document.getElementById('mnavLoginLbl');
+  const btn=document.getElementById('mnav-login');
+  const unread=anns.filter(a=>!readIds.includes(a.id)).length;
+  const badge=document.getElementById('mnavUnreadBadge');
+  const roleIcon={admin:'👑',editor:'✏️',user:'👤',viewer:'👁'};
+  if(lbl){
+    if(curUser){lbl.textContent=roleIcon[curRole]||'👤';btn.style.color=curRole==='admin'?'var(--o600)':curRole==='editor'?'#8b5cf6':'';}
+    else{lbl.textContent='ล็อกอิน';btn.style.color='';}
+  }
+  if(badge){
+    if(unread>0){badge.textContent=unread>99?'99+':unread;badge.classList.remove('hidden');}
+    else badge.classList.add('hidden');
+  }
+  // inbox badge
+  const ib=document.getElementById('inboxBadge');
+  // editor-only in drawer already handled by refreshAll
+}
+</script>
+
+</body>
