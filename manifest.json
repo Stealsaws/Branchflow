@@ -1,0 +1,36 @@
+{
+  "name": "BranchFlow — ระบบสื่อสารสาขา",
+  "short_name": "BranchFlow",
+  "description": "ระบบกระจายประกาศและสื่อสารระหว่างสำนักงานใหญ่กับสาขา",
+  "start_url": "/Branchflow/",
+  "scope": "/Branchflow/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fdf6ee",
+  "theme_color": "#c2410c",
+  "lang": "th",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='36' fill='%23c2410c'/><text y='.9em' font-size='144' x='14'>⚡</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%23c2410c'/><text y='.9em' font-size='384' x='38'>⚡</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "ดูประกาศทั้งหมด",
+      "short_name": "ประกาศ",
+      "url": "/Branchflow/",
+      "icons": [{ "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text y='.9em' font-size='80'>📢</text></svg>", "sizes": "96x96" }]
+    }
+  ]
+}
