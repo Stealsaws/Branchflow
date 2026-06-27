@@ -146,6 +146,7 @@ select.inp{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .sbadge.new     {background:rgba(20,184,166,.12);color:#0d9488;border:1px solid rgba(20,184,166,.25)}
 .sbadge.ongoing {background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.25)}
 .sbadge.done    {background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.25)}
+.sbadge.scheduled {background:rgba(99,102,241,.12);color:#6366f1;border:1px solid rgba(99,102,241,.3)}
 .sbadge.expired {background:rgba(163,163,163,.12);color:#737373;border:1px solid rgba(163,163,163,.25)}
 .cbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;background:var(--cl);color:var(--cc);border:1px solid var(--cb)}
 .lbtn{display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:8px;font-size:11px;font-weight:700;color:var(--cc,var(--o600));background:var(--cl,rgba(249,115,22,.08));border:1.5px solid var(--cb,rgba(249,115,22,.2));text-decoration:none;transition:all .22s;position:relative;overflow:hidden}
@@ -615,6 +616,19 @@ select.inp{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns=
       <div style="display:flex;gap:8px;margin-top:4px">
         <button type="button" onclick="closeM('annM')" class="btn btn-gh btn-fw" style="border-radius:10px">ยกเลิก</button>
         <button type="submit" id="annSubBtn" class="btn btn-o btn-fw btn-lg">โพสต์ประกาศ</button>
+      </div>
+      <!-- SCHEDULED POST -->
+      <div class="fsec" style="background:rgba(99,102,241,.06);border-color:rgba(99,102,241,.3);margin-top:4px">
+        <div class="tgl-row" style="gap:10px;margin-bottom:8px">
+          <button type="button" id="scheduleTgl" class="tgl" onclick="this.classList.toggle('on');document.getElementById('scheduleWrap').style.display=this.classList.contains('on')?'block':'none';document.getElementById('annSubBtn').innerHTML=this.classList.contains('on')?'⏰ ตั้งเวลาโพสต์':'โพสต์ประกาศ'"></button>
+          <div><div style="font-size:12px;font-weight:700;color:#6366f1">⏰ ตั้งเวลาโพสต์ล่วงหน้า</div>
+            <div style="font-size:10.5px;color:var(--t3)">ระบบจะโพสต์อัตโนมัติเมื่อถึงเวลา</div></div>
+        </div>
+        <div id="scheduleWrap" style="display:none">
+          <label class="lbl">วันและเวลาที่จะโพสต์ *</label>
+          <input type="datetime-local" id="annSchedule" class="inp" style="font-size:13px">
+          <div style="font-size:10px;color:#6366f1;margin-top:4px">⚡ ระบบตรวจสอบและโพสต์ทุก 5 นาที</div>
+        </div>
       </div>
     </form>
   </div>
@@ -1529,7 +1543,7 @@ function getVisible(){
 }
 function buildFilterBar(){
   const bar=document.getElementById('filterBar');bar.innerHTML='';
-  const stMap={all:{l:'ทุกสถานะ'},new:{l:'ใหม่'},ongoing:{l:'ดำเนินการ'},done:{l:'เสร็จแล้ว'}};
+  const stMap={all:{l:'ทุกสถานะ'},new:{l:'ใหม่'},ongoing:{l:'ดำเนินการ'},done:{l:'เสร็จแล้ว'},scheduled:{l:'⏰ รอโพสต์'}};
   Object.entries(stMap).forEach(([k,v])=>{
     const cnt=k==='all'?anns.length:anns.filter(a=>a.status===k).length;
     bar.insertAdjacentHTML('beforeend',`<button class="ftab ${curStatus===k?'on':''}" onclick="curStatus='${k}';buildFilterBar();renderCards()">${v.l}<span class="cnt">${cnt}</span></button>`);
@@ -1586,7 +1600,18 @@ function renderCards(){
 function _renderOneCard(grid,ann,i,now){
     const cat=CATS[ann.cat]||CATS.general,isExp=ann.expiry&&new Date(ann.expiry)<now,isUnread=!readIds.includes(ann.id);
     let ts='เพิ่งโพสต์';try{if(ann.ts){const d=new Date(ann.ts);if(!isNaN(d))ts=d.toLocaleDateString('th-TH');}}catch{}
-    const stBadge={new:`<span class="sbadge new">🔵 ใหม่</span>`,ongoing:`<span class="sbadge ongoing">🟡 ดำเนินการ</span>`,done:`<span class="sbadge done">🟢 เสร็จ</span>`}[ann.status]||'';
+    const stBadge={
+      new:`<span class="sbadge new">🔵 ใหม่</span>`,
+      ongoing:`<span class="sbadge ongoing">🟡 ดำเนินการ</span>`,
+      done:`<span class="sbadge done">🟢 เสร็จ</span>`,
+      scheduled:(()=>{
+        if(!ann.scheduledAt) return `<span class="sbadge scheduled">⏰ รอโพสต์</span>`;
+        const dt=new Date(ann.scheduledAt);
+        const diff=Math.round((dt-new Date())/60000);
+        const label=diff>60?`${Math.round(diff/60)}ชม.`:diff>0?`${diff}นาที`:'กำลังโพสต์...';
+        return `<span class="sbadge scheduled">⏰ ${label}</span>`;
+      })()
+    }[ann.status]||'';
     const catBadge=`<span class="cbadge cat-${ann.cat}">${cat.icon} ${cat.label}</span>`;
     const expBadge=isExp?`<span class="sbadge expired">⏰ หมดอายุ</span>`:'';
     const revBadge=ann.pendingRevisions>0?`<span class="sbadge" style="background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.25)">🔄 รอแก้ ${ann.pendingRevisions}</span>`:'';
@@ -1807,6 +1832,9 @@ window.openAddAnn=()=>{
   document.getElementById('annForm').reset();
   document.getElementById('pinTgl').classList.remove('on');
   document.getElementById('reqFileTgl').classList.remove('on');
+  document.getElementById('scheduleTgl').classList.remove('on');
+  document.getElementById('scheduleWrap').style.display='none';
+  document.getElementById('annSchedule').value='';
   buildBrCkList();openM('annM');
 };
 window.openEditAnn=id=>{
@@ -1858,11 +1886,21 @@ document.getElementById('annForm').addEventListener('submit',async e=>{
   const btn=document.getElementById('annSubBtn');btn.innerHTML='⏳...';btn.disabled=true;
   const eid=document.getElementById('annEId').value;
   const checked=Array.from(document.querySelectorAll('[name="brCk"]:checked')).map(c=>c.value);
+  const isScheduled=document.getElementById('scheduleTgl').classList.contains('on');
+  const scheduleVal=document.getElementById('annSchedule').value;
+
+  // validate scheduled time
+  if(isScheduled){
+    if(!scheduleVal){toast('กรุณาเลือกวันและเวลาที่จะโพสต์','⚠️');btn.innerHTML=eid?'บันทึกการแก้ไข':'โพสต์ประกาศ';btn.disabled=false;return;}
+    const schedDt=new Date(scheduleVal);
+    if(schedDt<=new Date()){toast('กรุณาเลือกเวลาในอนาคต','⚠️');btn.innerHTML=eid?'บันทึกการแก้ไข':'โพสต์ประกาศ';btn.disabled=false;return;}
+  }
+
   const payload={
     title:document.getElementById('annTi').value,
     content:document.getElementById('annCo').value,
     category:document.getElementById('annCat').value,
-    status:document.getElementById('annStatus').value,
+    status:isScheduled?'scheduled':document.getElementById('annStatus').value,
     link:document.getElementById('annLi').value,
     link_name:document.getElementById('annLn').value||'เปิดเอกสาร',
     expiry:document.getElementById('annExp').value||null,
@@ -1872,32 +1910,40 @@ document.getElementById('annForm').addEventListener('submit',async e=>{
     required_branches:Array.from(document.querySelectorAll('[name="reqBrCk"]:checked')).map(c=>c.value),
     branches:checked.length?checked:['ทุกสาขา'],
     created_by:curUser?.name||'admin',
+    scheduled_at:isScheduled?new Date(scheduleVal).toISOString():null,
   };
   if(eid){
     const ann=anns.find(a=>a.id===eid);
-    const hist=[...(ann?.history||[]),{by:curUser?.name||'admin',at:new Date().toISOString(),action:'แก้ไขประกาศ'}];
+    const hist=[...(ann?.history||[]),{by:curUser?.name||'admin',at:new Date().toISOString(),action:isScheduled?'ตั้งเวลาโพสต์':'แก้ไขประกาศ'}];
     const {error}=await sb.from('announcements').update({...payload,history:hist}).eq('id',eid);
     if(!error){
       const idx=anns.findIndex(a=>a.id===eid);
       if(idx>=0) Object.assign(anns[idx],{
         ...payload,cat:payload.category,linkName:payload.link_name,
         reqFile:payload.req_file,autoComplete:payload.auto_complete,
-        requiredBranches:payload.required_branches,history:hist
+        requiredBranches:payload.required_branches,history:hist,
+        scheduledAt:payload.scheduled_at
       });
-      toast('แก้ไขประกาศแล้วค่ะ','✅');
+      toast(isScheduled?`⏰ ตั้งเวลาโพสต์แล้ว: ${new Date(scheduleVal).toLocaleString('th-TH')}`:'แก้ไขประกาศแล้วค่ะ','✅');
     } else toast('เกิดข้อผิดพลาด','❌');
   } else {
-    const hist=[{by:curUser?.name||'admin',at:new Date().toISOString(),action:'สร้างประกาศ'}];
+    const hist=[{by:curUser?.name||'admin',at:new Date().toISOString(),action:isScheduled?'ตั้งเวลาโพสต์':'สร้างประกาศ'}];
     const {data,error}=await sb.from('announcements').insert({...payload,history:hist}).select().single();
     if(!error&&data){
       anns.unshift({
         id:data.id,...payload,cat:payload.category,linkName:payload.link_name,
         reqFile:payload.req_file,autoComplete:payload.auto_complete,
         requiredBranches:payload.required_branches||[],
-        ts:data.created_at,history:hist,pendingRevisions:0
+        ts:data.created_at,history:hist,pendingRevisions:0,
+        scheduledAt:payload.scheduled_at
       });
-      toast('โพสต์ประกาศแล้วค่ะ','✅');
-      notifyNewAnn({...payload,cat:payload.category});
+      if(isScheduled){
+        const dt=new Date(scheduleVal);
+        toast(`⏰ ตั้งเวลาโพสต์แล้ว\n${dt.toLocaleDateString('th-TH')} ${dt.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}ค่ะ`,'⏰');
+      } else {
+        toast('โพสต์ประกาศแล้วค่ะ','✅');
+        notifyNewAnn({...payload,cat:payload.category});
+      }
     } else toast('เกิดข้อผิดพลาด','❌');
   }
   btn.innerHTML=eid?'บันทึกการแก้ไข':'โพสต์ประกาศ';btn.disabled=false;
