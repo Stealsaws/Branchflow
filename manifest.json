@@ -6,8 +6,8 @@
   "scope": "/Branchflow/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#fdf6ee",
-  "theme_color": "#c2410c",
+  "background_color": "#EAF0FD",
+  "theme_color": "#1B3FA6",
   "lang": "th",
   "categories": ["business", "productivity"],
   "icons": [
