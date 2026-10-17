@@ -1018,6 +1018,7 @@ async function loadAll(){
       const {data:ups}=await sb.from('user_profiles').select('user_id,username,display_name,role,branch_name').order('display_name');
       if(ups) users=ups.map(u=>({id:u.user_id,username:u.username,name:u.display_name,role:u.role,branch:u.branch_name}));
     }
+    await loadLineSettings();
     const {data:revCounts}=await sb.from('revision_requests').select('announcement_id').eq('status','pending');
     if(revCounts){
       const countMap={};
@@ -1090,7 +1091,7 @@ async function _applySession(authUser){
         await _applySession(session.user);
         await loadAll();
       } else if(event==='SIGNED_OUT'){
-        curUser=null; curRole='viewer'; users=[];
+        curUser=null; curRole='viewer'; users=[]; LINE_CONFIG.channelToken='';LINE_CONFIG.groupId='';LINE_CONFIG.enabled=false;
         refreshAll();
         if(_realtimeChannel){try{sb.removeChannel(_realtimeChannel);}catch{}_realtimeChannel=null;}
       }
@@ -1418,11 +1419,37 @@ async function getAuthToken(){
   catch{return '';}
 }
 
-const LINE_CONFIG={
-  channelToken: localStorage.getItem('hub_line_token')||'',  // Channel Access Token
-  groupId:      localStorage.getItem('hub_line_group')||'',  // groupId หรือ roomId
-  enabled:      localStorage.getItem('hub_line_enabled')==='1',
-};
+// ตั้งค่า LINE เก็บใน Supabase (ตาราง line_settings) — admin/editor อ่านได้, admin แก้ได้
+const LINE_CONFIG={channelToken:'',groupId:'',enabled:false};
+function updateLineDot(){
+  const dot=document.getElementById('lineStatusDot');
+  if(dot) dot.style.background=LINE_CONFIG.enabled&&LINE_CONFIG.channelToken?'#22c55e':'var(--t3)';
+}
+async function loadLineSettings(){
+  LINE_CONFIG.channelToken='';LINE_CONFIG.groupId='';LINE_CONFIG.enabled=false;
+  if(curRole==='admin'||curRole==='editor'){
+    try{
+      const {data,error}=await sb.from('line_settings').select('channel_token,group_id,enabled').eq('id',1).maybeSingle();
+      if(!error&&data){
+        LINE_CONFIG.channelToken=data.channel_token||'';
+        LINE_CONFIG.groupId=data.group_id||'';
+        LINE_CONFIG.enabled=!!data.enabled;
+      }else if(!error&&!data&&curRole==='admin'){
+        // ย้ายค่าเดิมจาก localStorage (ครั้งเดียว) ขึ้น Supabase
+        const t=localStorage.getItem('hub_line_token')||'',g=localStorage.getItem('hub_line_group')||'';
+        if(t&&g){
+          const en=localStorage.getItem('hub_line_enabled')==='1';
+          const {error:e2}=await sb.from('line_settings').upsert({id:1,channel_token:t,group_id:g,enabled:en,updated_at:new Date().toISOString()});
+          if(!e2){
+            LINE_CONFIG.channelToken=t;LINE_CONFIG.groupId=g;LINE_CONFIG.enabled=en;
+            ['hub_line_token','hub_line_group','hub_line_enabled'].forEach(k=>localStorage.removeItem(k));
+          }
+        }
+      }
+    }catch(e){console.warn('loadLineSettings',e);}
+  }
+  updateLineDot();
+}
 
 async function sendLineMessage(message){
   if(!LINE_CONFIG.enabled||!LINE_CONFIG.channelToken||!LINE_CONFIG.groupId){
@@ -1465,23 +1492,26 @@ async function notifyNewAnn(ann){
 
 // UI settings สำหรับ LINE
 window.openLineSettings=()=>{
-  document.getElementById('lineTokenInp').value=LINE_CONFIG.channelToken;
-  document.getElementById('lineGroupInp').value=LINE_CONFIG.groupId;
+  const isA=curRole==='admin';
+  const ti=document.getElementById('lineTokenInp'),gi=document.getElementById('lineGroupInp');
+  ti.value=LINE_CONFIG.channelToken;gi.value=LINE_CONFIG.groupId;
+  ti.disabled=!isA;gi.disabled=!isA;
   const tgl=document.getElementById('lineEnabledTgl');
   if(LINE_CONFIG.enabled) tgl.classList.add('on'); else tgl.classList.remove('on');
+  tgl.style.pointerEvents=isA?'':'none';
   openM('lineSettingsM');
 };
-window.saveLineSettings=()=>{
-  LINE_CONFIG.channelToken=document.getElementById('lineTokenInp').value.trim();
-  LINE_CONFIG.groupId=document.getElementById('lineGroupInp').value.trim();
-  LINE_CONFIG.enabled=document.getElementById('lineEnabledTgl').classList.contains('on');
-  localStorage.setItem('hub_line_token',LINE_CONFIG.channelToken);
-  localStorage.setItem('hub_line_group',LINE_CONFIG.groupId);
-  localStorage.setItem('hub_line_enabled',LINE_CONFIG.enabled?'1':'0');
-  const dot=document.getElementById('lineStatusDot');
-  if(dot) dot.style.background=LINE_CONFIG.enabled&&LINE_CONFIG.channelToken?'#22c55e':'var(--t3)';
+window.saveLineSettings=async()=>{
+  if(curRole!=='admin'){toast('เฉพาะแอดมินที่แก้ตั้งค่า LINE ได้ค่ะ','🔒');return;}
+  const t=document.getElementById('lineTokenInp').value.trim();
+  const g=document.getElementById('lineGroupInp').value.trim();
+  const en=document.getElementById('lineEnabledTgl').classList.contains('on');
+  const {error}=await sb.from('line_settings').upsert({id:1,channel_token:t,group_id:g,enabled:en,updated_at:new Date().toISOString()});
+  if(error){console.warn('saveLineSettings',error);toast('❌ บันทึกไม่สำเร็จ','❌');return;}
+  LINE_CONFIG.channelToken=t;LINE_CONFIG.groupId=g;LINE_CONFIG.enabled=en;
+  updateLineDot();
   closeM('lineSettingsM');
-  toast(LINE_CONFIG.enabled?'✅ เปิดแจ้งเตือน LINE แล้วค่ะ':'LINE แจ้งเตือนปิดอยู่','💬');
+  toast(en?'✅ บันทึกแล้ว — เปิดแจ้งเตือน LINE ทุกเครื่องค่ะ':'บันทึกแล้ว — LINE แจ้งเตือนปิดอยู่','💬');
 };
 window.testLineMessage=async()=>{
   const btn=document.getElementById('lineTestBtn');
@@ -1533,8 +1563,7 @@ function refreshAll(){
   updateMobileNav();
   renderMenus();buildFilterBar();renderStats();renderCards();
   // อัปเดต LINE status dot
-  const dot=document.getElementById('lineStatusDot');
-  if(dot) dot.style.background=LINE_CONFIG.enabled&&LINE_CONFIG.channelToken?'#22c55e':'var(--t3)';
+  updateLineDot();
   // แสดงปุ่ม/โหลด revision สำหรับ branch user
   const sbBtn=document.getElementById('myRevSbBtn');
   if(sbBtn) sbBtn.style.display=curRole==='user'?'block':'none';

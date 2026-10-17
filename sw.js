@@ -1,7 +1,7 @@
 // sw.js — BranchFlow Service Worker
 // ใส่ไว้ที่ root ของ GitHub Pages repo เดียวกับ index.html
 
-const CACHE_NAME = 'branchflow-v4';
+const CACHE_NAME = 'branchflow-v5';
 const OFFLINE_URL = '/Branchflow/offline.html';
 
 // Assets ที่ cache ไว้ทันที (App Shell)
