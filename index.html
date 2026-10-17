@@ -1412,6 +1412,12 @@ document.getElementById('templateSaveForm')?.addEventListener('submit',async e=>
 // 5. ใส่ Channel Access Token + groupId ด้านล่าง
 // 6. เพิ่ม endpoint บน Apps Script (หรือ backend) เพื่อ proxy เพราะ CORS
 
+// token ของผู้ใช้ที่ล็อกอินอยู่ — ส่งให้ Apps Script ตรวจสิทธิ์ก่อนอัปโหลด/ส่ง LINE
+async function getAuthToken(){
+  try{const {data:{session}}=await sb.auth.getSession();return session?.access_token||'';}
+  catch{return '';}
+}
+
 const LINE_CONFIG={
   channelToken: localStorage.getItem('hub_line_token')||'',  // Channel Access Token
   groupId:      localStorage.getItem('hub_line_group')||'',  // groupId หรือ roomId
@@ -1429,6 +1435,7 @@ async function sendLineMessage(message){
       method:'POST',
       body:JSON.stringify({
         action:'lineMessage',
+        accessToken:  await getAuthToken(),
         channelToken: LINE_CONFIG.channelToken,
         groupId:      LINE_CONFIG.groupId,
         message:      message
@@ -2095,7 +2102,7 @@ async function uploadToGDrive(file, annTitle, branchName, annTs){
         const now=new Date();
         const pad=n=>String(n).padStart(2,'0');
         const uploadDate=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
-        const payload={file:base64,fileName:file.name,mimeType:file.type||'application/octet-stream',annTitle,branchName,annDate,uploadDate};
+        const payload={file:base64,fileName:file.name,mimeType:file.type||'application/octet-stream',annTitle,branchName,annDate,uploadDate,accessToken:await getAuthToken()};
 
         // ใช้ Content-Type: text/plain เพื่อหลีกเลี่ยง CORS preflight
         // Google Apps Script อ่านได้จาก e.postData.contents เหมือนกัน
@@ -2112,7 +2119,7 @@ async function uploadToGDrive(file, annTitle, branchName, annTs){
         try{
           const base64=e.target.result.split(',')[1];
           const now=new Date();const pad=n=>String(n).padStart(2,'0');
-          const payload={file:base64,fileName:file.name,mimeType:file.type||'application/octet-stream',annTitle,branchName,uploadDate:`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`};
+          const payload={file:base64,fileName:file.name,mimeType:file.type||'application/octet-stream',annTitle,branchName,uploadDate:`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`,accessToken:await getAuthToken()};
           await fetch(GDRIVE_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
           // no-cors ไม่รู้ว่าสำเร็จหรือเปล่า — assume success และบันทึก Supabase
           resolve({success:true,directUrl:'',viewUrl:'',noCors:true});
